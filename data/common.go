@@ -1,8 +1,8 @@
-package carboncopy
+package data
 
 import "time"
 
-type TweetObject struct {
+type Tweet struct {
 	Data Data `json:"data"`
 }
 
@@ -17,8 +17,32 @@ type Data struct {
 	Text              string    `json:"text"`
 }
 
+type Mentions struct {
+	Start    int    `json:"start"`
+	End      int    `json:"end"`
+	Username string `json:"username"`
+	ID       string `json:"id"`
+}
+
+type Annotations struct {
+	Start          int     `json:"start"`
+	End            int     `json:"end"`
+	Probability    float64 `json:"probability"`
+	Type           string  `json:"type"`
+	NormalizedText string  `json:"normalized_text"`
+}
+
+type Hashtags struct {
+	Start int    `json:"start"`
+	End   int    `json:"end"`
+	Tag   string `json:"tag"`
+}
+
 type Entities struct {
-	Urls []Urls `json:"urls"`
+	Mentions    []Mentions    `json:"mentions,omitempty"`
+	Annotations []Annotations `json:"annotations,omitempty"`
+	Urls        []Urls        `json:"urls,omitempty"`
+	Hashtags    []Hashtags    `json:"hashtags,omitempty"`
 }
 
 type Urls struct {

@@ -1,4 +1,4 @@
-package filteredstream
+package tweet
 
 import (
 	"os"

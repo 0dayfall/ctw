@@ -1,4 +1,4 @@
-package filteredstream
+package tweet
 
 import (
 	"encoding/json"
@@ -11,8 +11,8 @@ func createStreamUrl() string {
 	return "https://api.twitter.com/2/tweets/search/stream"
 }
 
-func createRulesUrl(validate bool) string {
-	if validate {
+func createRulesUrl(dryRun bool) string {
+	if dryRun {
 		return createStreamUrl() + "/rules?dry_run=true"
 	}
 	return createStreamUrl() + "/rules"
@@ -47,7 +47,6 @@ func AddRule(cmd AddCommand, dryRun bool) {
 func Stream() {
 	httpRequest := httphandler.CreateGetRequest(createStreamUrl())
 	httpResponse := httphandler.MakeRequest(httpRequest)
-	log.Println(httpResponse)
 	defer httpResponse.Body.Close()
 
 	var jsonResponse RulesResponse

@@ -5,30 +5,43 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
-)
 
-var (
-	bearerToken = os.Getenv("BEARER_TOKEN")
+	"github.com/0dayfall/carboncopy/config"
 )
-
-func Init(tkn string) {
-	bearerToken = tkn
-}
 
 func CreateGetRequest(url string) *http.Request {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	req.Header.Add("Authorization", "Bearer "+bearerToken)
+	req.Header.Add("Authorization", "Bearer "+config.BearerToken)
+	if config.UserAgent != "" {
+		setUserAgent(req, config.UserAgent)
+	}
 	return req
 }
 
-func setUserAgent(req *http.Request) {
-	req.Header.Add("User-Agent", "CarbonCopy v2")
+func CreatePostRequest(url string, data interface{}) *http.Request {
+	json, err := json.Marshal(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(json))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+config.BearerToken)
+	if config.UserAgent != "" {
+		setUserAgent(req, config.UserAgent)
+	}
+	return req
+}
+
+func setUserAgent(req *http.Request, userAgent string) {
+	req.Header.Set("User-Agent", userAgent)
 }
 
 type ErrorResponse struct {
@@ -42,18 +55,18 @@ func IsResponseOK(response *http.Response) bool {
 	responseOK := response.StatusCode > 199 && response.StatusCode < 300
 	if !responseOK {
 		log.Println(response.Status)
-		var jsonResponse ErrorResponse
-		if err := json.NewDecoder(response.Body).Decode(&jsonResponse); err != nil {
+		var errorResponse ErrorResponse
+		if err := json.NewDecoder(response.Body).Decode(&errorResponse); err != nil {
 			log.Println(err)
 		}
-		for _, error := range jsonResponse.Errors {
+		for _, error := range errorResponse.Errors {
 			log.Println(error.Message)
 		}
 	}
 	return responseOK
 }
 
-func isRateLimitOK(resp *http.Response) (bool, int) {
+func IsRateLimitOK(resp *http.Response) (bool, int) {
 	timeToReset, err := strconv.Atoi(resp.Header.Get("x-rate-limit-reset"))
 	if err != nil {
 		return false, -1
@@ -66,20 +79,6 @@ func isRateLimitOK(resp *http.Response) (bool, int) {
 		return false, timeToReset
 	}
 	return true, timeToReset
-}
-
-func CreatePostRequest(url string, data interface{}) *http.Request {
-	json, err := json.Marshal(&data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(json))
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Add("Content-type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+bearerToken)
-	return req
 }
 
 func MakeRequest(request *http.Request) *http.Response {

@@ -1,0 +1,19 @@
+{
+    "data": [
+      {
+        "name": "Facebook",
+        "symbol": "FB"
+      },
+      {
+        "name": "Google",
+        "symbol": "GOOG"
+      },
+      {
+        "name": "Netflix",
+        "symbol": "NFLX"
+      },
+      {
+        "name": "NVidia",
+        "symbol": "NVDA"
+      }]
+}

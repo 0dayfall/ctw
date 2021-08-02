@@ -1,15 +1,10 @@
-package tweetcounts
+package tweet
 
 import (
 	"encoding/json"
 	"log"
-	"os"
 
 	"github.com/0dayfall/carboncopy/httphandler"
-)
-
-var (
-	bearerToken = os.Getenv("BEARER_TOKEN")
 )
 
 func createRecentTweetCountsUrl() string {
@@ -32,9 +27,9 @@ func GetRecentCount(query string, granularity string) CountResponse {
 	if !httphandler.IsResponseOK(response) {
 		return CountResponse{}
 	}
-	var jsonResponse CountResponse
-	if err := json.NewDecoder(response.Body).Decode(&jsonResponse); err != nil {
+	var countResponse CountResponse
+	if err := json.NewDecoder(response.Body).Decode(&countResponse); err != nil {
 		log.Println(err)
 	}
-	return jsonResponse
+	return countResponse
 }

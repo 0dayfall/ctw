@@ -1,4 +1,4 @@
-package filteredstream
+package tweet
 
 func CreateUrl() string {
 	return "https://api.twitter.com/2/tweets/sample/stream"

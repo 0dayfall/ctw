@@ -4,9 +4,12 @@
 *.dll
 *.so
 *.dylib
+*.DS_Store
+*.zh
 
 # Test binary, built with `go test -c`
 *.test
+*.csv
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out

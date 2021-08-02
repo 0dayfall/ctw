@@ -1,4 +1,4 @@
-package searchtweets
+package tweet
 
 import (
 	"os"

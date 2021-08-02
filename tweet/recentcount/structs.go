@@ -1,4 +1,4 @@
-package tweetcounts
+package tweet
 
 import "time"
 
