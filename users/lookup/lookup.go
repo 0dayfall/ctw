@@ -55,7 +55,7 @@ type UserMetrics struct {
 	Listed    int `json:"listed_count"`
 }
 
-func LookupID(ids string) {
+func LookupID(ids string) User {
 	url := createIDLookupURL() + ids
 	req := httphandler.CreateGetRequest(url)
 	response := httphandler.MakeRequest(req)
@@ -65,11 +65,10 @@ func LookupID(ids string) {
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	httphandler.PrettyPrint(userResponse)
-	log.Println(userResponse)
+	return userResponse
 }
 
-func LookupIDs(users []string) {
+func LookupIDs(users []string) User {
 	url := createUsernamesLookupURL()
 	req := httphandler.CreateGetRequest(url)
 	q := req.URL.Query()
@@ -86,11 +85,10 @@ func LookupIDs(users []string) {
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	httphandler.PrettyPrint(userResponse)
-	log.Println(userResponse)
+	return userResponse
 }
 
-func LookupUsername(user string) {
+func LookupUsername(user string) User {
 	url := createUsernameLookupURL() + "user"
 	req := httphandler.CreateGetRequest(url)
 	response := httphandler.MakeRequest(req)
@@ -100,11 +98,10 @@ func LookupUsername(user string) {
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	httphandler.PrettyPrint(userResponse)
-	log.Println(response)
+	return userResponse
 }
 
-func LookupUsernames(users []string) {
+func LookupUsernames(users []string) User {
 	url := createUsernamesLookupURL()
 	req := httphandler.CreateGetRequest(url)
 	q := req.URL.Query()
@@ -119,5 +116,5 @@ func LookupUsernames(users []string) {
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	httphandler.PrettyPrint(userResponse)
+	return userResponse
 }
