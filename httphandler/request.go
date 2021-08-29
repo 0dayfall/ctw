@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/0dayfall/carboncopy/config"
+	"github.com/0dayfall/ctw/config"
 )
 
 func CreateGetRequest(url string) *http.Request {

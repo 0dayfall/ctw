@@ -3,7 +3,7 @@ package tweet
 import (
 	"time"
 
-	common "github.com/0dayfall/carboncopy/data"
+	common "github.com/0dayfall/ctw/data"
 )
 
 type SearchRecentResponse struct {

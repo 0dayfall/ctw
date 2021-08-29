@@ -9,7 +9,7 @@ import (
 	"path"
 	"strconv"
 
-	tc "github.com/0dayfall/carboncopy/tweet/recentcount"
+	tc "github.com/0dayfall/ctw/tweet/recentcount"
 )
 
 type StockFile struct {

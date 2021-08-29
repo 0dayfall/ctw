@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/0dayfall/carboncopy/httphandler"
+	"github.com/0dayfall/ctw/httphandler"
 )
 
 func TestMain(m *testing.M) {

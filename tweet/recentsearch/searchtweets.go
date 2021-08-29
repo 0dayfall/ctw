@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	httphandler "github.com/0dayfall/carboncopy/httphandler"
+	httphandler "github.com/0dayfall/ctw/httphandler"
 )
 
 func createSearchTweetURL() string {

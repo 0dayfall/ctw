@@ -5,8 +5,8 @@ import (
 	"log"
 	"strings"
 
-	common "github.com/0dayfall/carboncopy/data"
-	httphandler "github.com/0dayfall/carboncopy/httphandler"
+	common "github.com/0dayfall/ctw/data"
+	httphandler "github.com/0dayfall/ctw/httphandler"
 )
 
 func createIDsLookupURL() string {
