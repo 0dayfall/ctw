@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"log"
 
+	common "github.com/0dayfall/ctw/data"
 	"github.com/0dayfall/ctw/httphandler"
 )
 
+const (
+	rules = "/2/tweets/search/stream"
+)
+
 func createStreamUrl() string {
-	return "https://api.twitter.com/2/tweets/search/stream"
+	return common.APIurl + rules
 }
 
 func createRulesUrl(dryRun bool) string {

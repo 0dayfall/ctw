@@ -9,20 +9,27 @@ import (
 	httphandler "github.com/0dayfall/ctw/httphandler"
 )
 
+const (
+	users           = "/2/users"
+	userById        = "/2/users/:id"
+	usersByUsername = "/2/users/by"
+	userByUsername  = "/2/users/by/username/:username"
+)
+
 func createIDsLookupURL() string {
-	return "https://api.twitter.com/2/users"
+	return common.APIurl + users
 }
 
-func createIDLookupURL() string {
-	return "https://api.twitter.com/2/users/"
+func createLookupUserByIdURL(id string) string {
+	return common.APIurl + strings.Replace(userById, ":id", id, 1)
 }
 
 func createUsernamesLookupURL() string {
-	return "https://api.twitter.com/2/users/by"
+	return common.APIurl + users
 }
 
-func createUsernameLookupURL() string {
-	return "https://api.twitter.com/2/users/by/username/"
+func createUsernameLookupURL(username string) string {
+	return common.APIurl + strings.Replace(userByUsername, ":username", username, 1)
 }
 
 type User struct {
@@ -55,8 +62,8 @@ type UserMetrics struct {
 	Listed    int `json:"listed_count"`
 }
 
-func LookupID(ids string) User {
-	url := createIDLookupURL() + ids
+func LookupID(id string) User {
+	url := createLookupUserByIdURL(id)
 	req := httphandler.CreateGetRequest(url)
 	response := httphandler.MakeRequest(req)
 	defer response.Body.Close()
@@ -89,7 +96,7 @@ func LookupIDs(users []string) User {
 }
 
 func LookupUsername(user string) User {
-	url := createUsernameLookupURL() + "user"
+	url := createUsernameLookupURL(user)
 	req := httphandler.CreateGetRequest(url)
 	response := httphandler.MakeRequest(req)
 	defer response.Body.Close()

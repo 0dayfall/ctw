@@ -2,6 +2,10 @@ package config
 
 import "os"
 
+const (
+	APIurl = "http://www.twitter.com"
+)
+
 var (
 	BearerToken string = os.Getenv("BEARER_TOKEN")
 	UserAgent   string

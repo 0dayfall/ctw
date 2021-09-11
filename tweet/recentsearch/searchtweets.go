@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"log"
 
+	common "github.com/0dayfall/ctw/data"
 	httphandler "github.com/0dayfall/ctw/httphandler"
 )
 
+const (
+	search = "/2/tweets/search/recent"
+)
+
 func createSearchTweetURL() string {
-	return "https://api.twitter.com/2/tweets/search/recent"
+	return common.APIurl + search
 }
 
 func SearchRecent(query string) (SearchRecentResponse, int, string) {
@@ -16,7 +21,6 @@ func SearchRecent(query string) (SearchRecentResponse, int, string) {
 	req := httphandler.CreateGetRequest(url)
 	q := req.URL.Query()
 	q.Add("query", query)
-
 	req.URL.RawQuery = q.Encode()
 	log.Println(req)
 	response := httphandler.MakeRequest(req)

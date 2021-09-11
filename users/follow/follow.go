@@ -1,6 +1,10 @@
 package user
 
-import "strings"
+import (
+	"strings"
+
+	common "github.com/0dayfall/ctw/data"
+)
 
 const (
 	following = "/2/users/:id/following"
@@ -9,17 +13,14 @@ const (
 )
 
 func createFollowingURL(id string) string {
-	url := strings.Replace(following, ":id", id, 1)
-	return url
+	return common.APIurl + strings.Replace(following, ":id", id, 1)
 }
 
 func createFollowersURL(id string) string {
-	url := strings.Replace(followers, ":id", id, 1)
-	return url
+	return common.APIurl + strings.Replace(followers, ":id", id, 1)
 }
 
 func createUnfollowURL(sourceId, targetId string) string {
 	url := strings.Replace(unfollow, ":source_user_id", sourceId, 1)
-	url = strings.Replace(url, ":target_user_id", targetId, 1)
-	return url
+	return common.APIurl + strings.Replace(url, ":target_user_id", targetId, 1)
 }
