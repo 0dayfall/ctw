@@ -4,15 +4,21 @@ import (
 	"encoding/json"
 	"log"
 
+	common "github.com/0dayfall/ctw/data"
 	"github.com/0dayfall/ctw/httphandler"
 )
 
+const (
+	recentURL   = "/2/tweets/counts/recent"
+	countAllURL = "/2/tweets/counts/all"
+)
+
 func createRecentTweetCountsUrl() string {
-	return "https://api.twitter.com/2/tweets/counts/recent"
+	return common.APIurl + recentURL
 }
 
 func createAllTweetCountsUrl() string {
-	return "https://api.twitter.com/2/tweets/counts/all"
+	return common.APIurl + countAllURL
 }
 
 func GetRecentCount(query string, granularity string) CountResponse {

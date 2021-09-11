@@ -1,0 +1,1 @@
+curl https://api.twitter.com/2/users/2244994945/blocking -H "Authorization: OAuth $OAUTH_SIGNATURE"

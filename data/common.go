@@ -1,6 +1,10 @@
-package data
+package common
 
 import "time"
+
+const (
+	APIurl = "https://api.twitter.com"
+)
 
 type Tweet struct {
 	Data Data `json:"data"`
