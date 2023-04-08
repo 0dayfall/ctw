@@ -2,7 +2,6 @@ package user
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"strings"
 
@@ -29,53 +28,45 @@ func createDeleteBlockURL(sourceId, targetId string) string {
 type BlockResponse struct {
 }
 
-func (b *BlockResponse) decode(body io.ReadCloser) *BlockResponse {
-	if err := json.NewDecoder(body).Decode(b); err != nil {
-		log.Println(err)
-	}
-	return b
-}
-
-func BlockUserIdX(id string) BlockResponse {
+func BlockUserIdX(id string) (blockResponse BlockResponse, err error) {
 	url := createBlockURL(id)
 	req := httphandler.CreateGetRequest(url)
-	response := httphandler.MakeRequest(req)
-	defer response.Body.Close()
-	if !httphandler.IsResponseOK(response) {
-		return BlockResponse{}
+	resp, err := httphandler.MakeRequest(req)
+	defer resp.Body.Close()
+
+	if !httphandler.IsResponseOK(resp) {
+		return
 	}
-	var blockResponse BlockResponse
-	if err := json.NewDecoder(response.Body).Decode(&blockResponse); err != nil {
-		log.Println(err)
-	}
-	return blockResponse
+	json.NewDecoder(resp.Body).Decode(blockResponse)
+	return
 }
 
-func BlockUserId(id string) BlockResponse {
+func BlockUserId(id string) (blockResponse BlockResponse, err error) {
 	url := createBlockURL(id)
 	req := httphandler.CreateGetRequest(url)
-	response := httphandler.MakeRequest(req)
-	defer response.Body.Close()
-	if !httphandler.IsResponseOK(response) {
-		return BlockResponse{}
+	resp, err := httphandler.MakeRequest(req)
+	defer resp.Body.Close()
+
+	if !httphandler.IsResponseOK(resp) {
+		return
 	}
-	var blockResponse BlockResponse
-	return *blockResponse.decode(response.Body)
+	json.NewDecoder(resp.Body).Decode(blockResponse)
+	return
 }
 
 type DeleteBlockResponse struct{}
 
-func DeleteBlock(id string, blockedId string) DeleteBlockResponse {
+func DeleteBlock(id string, blockedId string) (deleteBlockResponse DeleteBlockResponse, err error) {
 	url := createDeleteBlockURL(id, blockedId)
 	req := httphandler.CreateGetRequest(url)
-	response := httphandler.MakeRequest(req)
+	response, err := httphandler.MakeRequest(req)
 	defer response.Body.Close()
+
 	if !httphandler.IsResponseOK(response) {
-		return DeleteBlockResponse{}
+		return
 	}
-	var deleteBlockResponse DeleteBlockResponse
 	if err := json.NewDecoder(response.Body).Decode(&deleteBlockResponse); err != nil {
 		log.Println(err)
 	}
-	return deleteBlockResponse
+	return
 }

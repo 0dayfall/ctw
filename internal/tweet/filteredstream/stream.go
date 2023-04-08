@@ -1,37 +1,38 @@
 package tweet
 
-func CreateUrl() string {
-	return "https://api.twitter.com/2/tweets/sample/stream"
+import (
+	"encoding/json"
+	"log"
+	"net/url"
+
+	common "github.com/0dayfall/ctw/internal/data"
+	"github.com/0dayfall/ctw/internal/httphandler"
+)
+
+var (
+	streamUrl = common.APIurl + rules
+)
+
+func createStreamUrlWithFields(fields map[string]string) string {
+	params := url.Values{}
+	for key, value := range fields {
+		params.Add(key, value)
+	}
+	return streamUrl + "?" + params.Encode()
 }
 
-/*func createRequest() *http.Request {
-	req, err := http.NewRequest("GET", CreateUrl(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Add("Authorization", "Bearer "+bearerToken)
-	return req
-}
+func Stream(fields map[string]string) (jsonResponse map[string]interface{}, err error) {
+	httpRequest := httphandler.CreateGetRequest(createStreamUrlWithFields(fields))
+	httpResponse, err := httphandler.MakeRequest(httpRequest)
+	defer func() {
+		err := httpResponse.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
-func makeRequest() *http.Response {
-	client := http.Client{}
-	response, err := client.Do(createRequest())
-	if err != nil {
-		log.Fatal(err)
+	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
+		log.Println(err)
 	}
-	if response.StatusCode != 200 {
-		log.Fatal(response.Status)
-	}
-	return response
+	return
 }
-
-func SampleStream() {
-	response := makeRequest()
-	var sampleStreamResponse StreamResponse
-	err := json.NewDecoder(response.Body).Decode(&sampleStreamResponse)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(sampleStreamResponse)
-}
-*/

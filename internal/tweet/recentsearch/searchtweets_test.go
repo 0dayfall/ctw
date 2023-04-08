@@ -11,10 +11,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestSearchRecent(t *testing.T) {
-	SearchRecent("ericsson lang:sv")
+	_, _, _, _ = SearchRecent("ericsson lang:sv")
 }
 
 func TestSearchRecentNextToken(t *testing.T) {
-	_, _, token := SearchRecent("ericsson lang:sv")
-	_, _, _ = SearchRecentNextToken("ericsson lang:sv", token)
+	_, _, token, _ := SearchRecent("ericsson lang:sv")
+	_, _, _, _ = SearchRecentNextToken("ericsson lang:sv", token)
 }

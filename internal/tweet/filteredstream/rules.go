@@ -3,7 +3,6 @@ package tweet
 import (
 	"encoding/json"
 	"log"
-	"net/url"
 
 	common "github.com/0dayfall/ctw/internal/data"
 	"github.com/0dayfall/ctw/internal/httphandler"
@@ -14,44 +13,26 @@ const (
 )
 
 var (
-	rulesUrl = common.APIurl + rules
+	rulesBaseUrl = common.APIurl + rules
 )
 
-func createStreamUrl() string {
-	return rulesUrl
-}
-
-func createStreamUrlWithFields(fields map[string]string) string {
-	params := url.Values{}
-	for key, value := range fields {
-		params.Add(key, value)
-	}
-	return rulesUrl + "?" + params.Encode()
-}
-
 func createRulesUrl(dryRun bool) (rulesUrl string) {
-	rulesUrl = createStreamUrl() + "/rules"
+	rulesUrl = rulesBaseUrl + "/rules"
 	if dryRun {
 		rulesUrl += "?dry_run=true"
 	}
 	return
 }
 
-func GetRules() (jsonResponse RulesResponse, err error) {
-	httpRequest := httphandler.CreateGetRequest(createRulesUrl(false))
-	response := httphandler.MakeRequest(httpRequest)
-	defer response.Body.Close()
-
-	if err := json.NewDecoder(response.Body).Decode(&jsonResponse); err != nil {
-		log.Println(err)
-	}
-	return
-}
-
 func AddRule(cmd AddCommand, dryRun bool) (jsonResponse RulesResponse, err error) {
 	httpRequest := httphandler.CreatePostRequest(createRulesUrl(dryRun), cmd)
-	httpResponse := httphandler.MakeRequest(httpRequest)
-	defer httpResponse.Body.Close()
+	httpResponse, err := httphandler.MakeRequest(httpRequest)
+	defer func() {
+		err := httpResponse.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	httphandler.IsResponseOK(httpResponse)
 
 	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
@@ -60,10 +41,15 @@ func AddRule(cmd AddCommand, dryRun bool) (jsonResponse RulesResponse, err error
 	return
 }
 
-func Stream(fields map[string]string) (jsonResponse interface{}, err error) {
-	httpRequest := httphandler.CreateGetRequest(createStreamUrlWithFields(fields))
-	httpResponse := httphandler.MakeRequest(httpRequest)
-	defer httpResponse.Body.Close()
+func GetRules() (jsonResponse RulesResponse, err error) {
+	httpRequest := httphandler.CreateGetRequest(createRulesUrl(false))
+	httpResponse, err := httphandler.MakeRequest(httpRequest)
+	defer func() {
+		err := httpResponse.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
 		log.Println(err)

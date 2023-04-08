@@ -4,6 +4,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -22,7 +24,8 @@ func TestDeleteBlockedUserNamesURL(t *testing.T) {
 }
 
 func TestBlockUserId(t *testing.T) {
-	response := BlockUserId("1")
+	response, err := BlockUserId("1")
+	require.NoError(t, err)
 	AssertEqual(t, response, nil)
 }
 

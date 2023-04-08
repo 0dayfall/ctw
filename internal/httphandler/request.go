@@ -71,15 +71,15 @@ func IsRateLimitOK(resp *http.Response) (bool, int) {
 	return true, timeToReset
 }
 
-func MakeRequest(request *http.Request) *http.Response {
+func MakeRequest(request *http.Request) (response *http.Response, err error) {
 	client := http.Client{
 		Timeout: 60 * time.Second,
 	}
-	response, err := client.Do(request)
+	response, err = client.Do(request)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return response
+	return
 }
 
 func setupHeaders(req *http.Request) {
@@ -100,4 +100,13 @@ func setUserAgent(req *http.Request) {
 	if config.UserAgent != "" {
 		req.Header.Set("User-Agent", config.UserAgent)
 	}
+}
+
+func AddQuery(req *http.Request, queries map[string]string) {
+	q := req.URL.Query()
+	for k, v := range queries {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
+	log.Println(req)
 }

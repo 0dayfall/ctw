@@ -3,39 +3,47 @@ package tweet
 import (
 	"encoding/json"
 	"log"
+	"net/url"
 
 	common "github.com/0dayfall/ctw/internal/data"
 	"github.com/0dayfall/ctw/internal/httphandler"
 )
 
 const (
-	recentURL   = "/2/tweets/counts/recent"
-	countAllURL = "/2/tweets/counts/all"
+	recent = "/2/tweets/counts/recent"
+	all    = "/2/tweets/counts/all"
 )
 
-func createRecentTweetCountsUrl() string {
-	return common.APIurl + recentURL
+var (
+	recentBaseURL   = common.APIurl + recent
+	allTweetBaseURL = common.APIurl + all
+)
+
+func getRecentURL(query string, granularity string) string {
+	params := url.Values{}
+	params.Add("query", query)
+	params.Add("granularity", granularity)
+	return recentBaseURL + "?" + params.Encode()
 }
 
-func createAllTweetCountsUrl() string {
-	return common.APIurl + countAllURL
-}
+func GetRecentCount(query string, granularity string) (countResponse CountResponse, err error) {
+	req := httphandler.CreateGetRequest(getRecentURL(query, granularity))
 
-func GetRecentCount(query string, granularity string) CountResponse {
-	url := createRecentTweetCountsUrl()
-	req := httphandler.CreateGetRequest(url)
-	q := req.URL.Query()
-	q.Add("query", query)
-	q.Add("granularity", granularity)
-	req.URL.RawQuery = q.Encode()
-	response := httphandler.MakeRequest(req)
-	defer response.Body.Close()
-	if !httphandler.IsResponseOK(response) {
-		return CountResponse{}
+	resp, err := httphandler.MakeRequest(req)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	if !httphandler.IsResponseOK(resp) {
+		return
 	}
-	var countResponse CountResponse
-	if err := json.NewDecoder(response.Body).Decode(&countResponse); err != nil {
+
+	if err = json.NewDecoder(resp.Body).Decode(&countResponse); err != nil {
 		log.Println(err)
 	}
-	return countResponse
+
+	return
 }

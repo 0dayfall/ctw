@@ -62,20 +62,18 @@ type UserMetrics struct {
 	Listed    int `json:"listed_count"`
 }
 
-func LookupID(id string) User {
+func LookupID(id string) (userResponse User, err error) {
 	url := createLookupUserByIdURL(id)
 	req := httphandler.CreateGetRequest(url)
-	response := httphandler.MakeRequest(req)
+	response, err := httphandler.MakeRequest(req)
 	defer response.Body.Close()
-
-	var userResponse User
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	return userResponse
+	return
 }
 
-func LookupIDs(users []string) User {
+func LookupIDs(users []string) (userResponse User, err error) {
 	url := createUsernamesLookupURL()
 	req := httphandler.CreateGetRequest(url)
 	q := req.URL.Query()
@@ -85,30 +83,28 @@ func LookupIDs(users []string) User {
 	}
 	q.Add("usernames", userNames)
 	req.URL.RawQuery = q.Encode()
-	response := httphandler.MakeRequest(req)
+	response, err := httphandler.MakeRequest(req)
 	defer response.Body.Close()
 
-	var userResponse User
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	return userResponse
+	return
 }
 
-func LookupUsername(user string) User {
+func LookupUsername(user string) (userResponse User, err error) {
 	url := createUsernameLookupURL(user)
 	req := httphandler.CreateGetRequest(url)
-	response := httphandler.MakeRequest(req)
+	response, err := httphandler.MakeRequest(req)
 	defer response.Body.Close()
 
-	var userResponse User
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	return userResponse
+	return
 }
 
-func LookupUsernames(users []string) User {
+func LookupUsernames(users []string) (userResponse User, err error) {
 	url := createUsernamesLookupURL()
 	req := httphandler.CreateGetRequest(url)
 	q := req.URL.Query()
@@ -116,12 +112,12 @@ func LookupUsernames(users []string) User {
 	q.Add("usernames", userNames)
 	req.URL.RawQuery = q.Encode()
 	log.Println("GET " + req.URL.String())
-	response := httphandler.MakeRequest(req)
+	response, err := httphandler.MakeRequest(req)
 	defer response.Body.Close()
 	httphandler.IsResponseOK(response)
-	var userResponse User
+
 	if err := json.NewDecoder(response.Body).Decode(&userResponse); err != nil {
 		log.Println(err)
 	}
-	return userResponse
+	return
 }
