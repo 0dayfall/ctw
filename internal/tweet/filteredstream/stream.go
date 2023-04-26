@@ -24,12 +24,7 @@ func createStreamUrlWithFields(fields map[string]string) string {
 func Stream(fields map[string]string) (jsonResponse map[string]interface{}, err error) {
 	httpRequest := httphandler.CreateGetRequest(createStreamUrlWithFields(fields))
 	httpResponse, err := httphandler.MakeRequest(httpRequest)
-	defer func() {
-		err := httpResponse.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+	defer httphandler.CloseBody(httpResponse.Body)
 
 	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
 		log.Println(err)

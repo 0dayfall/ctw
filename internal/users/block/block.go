@@ -31,26 +31,30 @@ type BlockResponse struct {
 func BlockUserIdX(id string) (blockResponse BlockResponse, err error) {
 	url := createBlockURL(id)
 	req := httphandler.CreateGetRequest(url)
-	resp, err := httphandler.MakeRequest(req)
-	defer resp.Body.Close()
+	httpResponse, err := httphandler.MakeRequest(req)
+	defer httphandler.CloseBody(httpResponse.Body)
 
-	if !httphandler.IsResponseOK(resp) {
+	if !httphandler.IsResponseOK(httpResponse) {
 		return
 	}
-	json.NewDecoder(resp.Body).Decode(blockResponse)
+	if err := json.NewDecoder(httpResponse.Body).Decode(&blockResponse); err != nil {
+		log.Println(err)
+	}
 	return
 }
 
 func BlockUserId(id string) (blockResponse BlockResponse, err error) {
 	url := createBlockURL(id)
 	req := httphandler.CreateGetRequest(url)
-	resp, err := httphandler.MakeRequest(req)
-	defer resp.Body.Close()
+	httpResponse, err := httphandler.MakeRequest(req)
+	defer httphandler.CloseBody(httpResponse.Body)
 
-	if !httphandler.IsResponseOK(resp) {
+	if !httphandler.IsResponseOK(httpResponse) {
 		return
 	}
-	json.NewDecoder(resp.Body).Decode(blockResponse)
+	if err := json.NewDecoder(httpResponse.Body).Decode(&blockResponse); err != nil {
+		log.Println(err)
+	}
 	return
 }
 
@@ -59,13 +63,13 @@ type DeleteBlockResponse struct{}
 func DeleteBlock(id string, blockedId string) (deleteBlockResponse DeleteBlockResponse, err error) {
 	url := createDeleteBlockURL(id, blockedId)
 	req := httphandler.CreateGetRequest(url)
-	response, err := httphandler.MakeRequest(req)
-	defer response.Body.Close()
+	httpResponse, err := httphandler.MakeRequest(req)
+	defer httphandler.CloseBody(httpResponse.Body)
 
-	if !httphandler.IsResponseOK(response) {
+	if !httphandler.IsResponseOK(httpResponse) {
 		return
 	}
-	if err := json.NewDecoder(response.Body).Decode(&deleteBlockResponse); err != nil {
+	if err := json.NewDecoder(httpResponse.Body).Decode(&deleteBlockResponse); err != nil {
 		log.Println(err)
 	}
 	return

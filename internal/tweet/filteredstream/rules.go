@@ -27,12 +27,7 @@ func createRulesUrl(dryRun bool) (rulesUrl string) {
 func AddRule(cmd AddCommand, dryRun bool) (jsonResponse RulesResponse, err error) {
 	httpRequest := httphandler.CreatePostRequest(createRulesUrl(dryRun), cmd)
 	httpResponse, err := httphandler.MakeRequest(httpRequest)
-	defer func() {
-		err := httpResponse.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+	defer httphandler.CloseBody(httpResponse.Body)
 	httphandler.IsResponseOK(httpResponse)
 
 	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
@@ -44,12 +39,7 @@ func AddRule(cmd AddCommand, dryRun bool) (jsonResponse RulesResponse, err error
 func GetRules() (jsonResponse RulesResponse, err error) {
 	httpRequest := httphandler.CreateGetRequest(createRulesUrl(false))
 	httpResponse, err := httphandler.MakeRequest(httpRequest)
-	defer func() {
-		err := httpResponse.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+	defer httphandler.CloseBody(httpResponse.Body)
 
 	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
 		log.Println(err)

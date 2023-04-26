@@ -41,15 +41,10 @@ func SearchRecentNextToken(queryString string, token string) (searchRecentRespon
 		"query":            queryString,
 		"pagination_token": token,
 	})
-	resp, err := httphandler.MakeRequest(req)
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+	httpResponse, err := httphandler.MakeRequest(req)
+	defer httphandler.CloseBody(httpResponse.Body)
 
-	if err = json.NewDecoder(resp.Body).Decode(&searchRecentResponse); err != nil {
+	if err = json.NewDecoder(httpResponse.Body).Decode(&searchRecentResponse); err != nil {
 		log.Println(err)
 	}
 	resultCount = searchRecentResponse.Meta.ResultCount

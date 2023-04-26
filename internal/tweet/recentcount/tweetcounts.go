@@ -29,19 +29,14 @@ func getRecentURL(query string, granularity string) string {
 func GetRecentCount(query string, granularity string) (countResponse CountResponse, err error) {
 	req := httphandler.CreateGetRequest(getRecentURL(query, granularity))
 
-	resp, err := httphandler.MakeRequest(req)
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+	httpResponse, err := httphandler.MakeRequest(req)
+	defer httphandler.CloseBody(httpResponse.Body)
 
-	if !httphandler.IsResponseOK(resp) {
+	if !httphandler.IsResponseOK(httpResponse) {
 		return
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(&countResponse); err != nil {
+	if err = json.NewDecoder(httpResponse.Body).Decode(&countResponse); err != nil {
 		log.Println(err)
 	}
 

@@ -3,6 +3,7 @@ package httphandler
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,12 +14,12 @@ import (
 )
 
 func CreateGetRequest(url string) *http.Request {
-	req, err := http.NewRequest("GET", url, nil)
+	httpRequest, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	setupHeaders(req)
-	return req
+	setupHeaders(httpRequest)
+	return httpRequest
 }
 
 func CreatePostRequest(url string, data interface{}) *http.Request {
@@ -34,20 +35,22 @@ func CreatePostRequest(url string, data interface{}) *http.Request {
 	return req
 }
 
-type ErrorResponse struct {
-	Errors []struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"errors"`
+type Error struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
-func IsResponseOK(response *http.Response) bool {
-	responseOK := response.StatusCode > 199 && response.StatusCode < 300
+type ErrorResponse struct {
+	Errors []Error `json:"errors"`
+}
+
+func IsResponseOK(httpResponse *http.Response) bool {
+	responseOK := httpResponse.StatusCode > 199 && httpResponse.StatusCode < 300
 	if !responseOK {
-		log.Println(response.Status)
+		log.Println(httpResponse.Status)
 		var errorResponse ErrorResponse
-		if err := json.NewDecoder(response.Body).Decode(&errorResponse); err != nil {
-			log.Println(err)
+		if err := json.NewDecoder(httpResponse.Body).Decode(&errorResponse); err != nil {
+			log.Fatal(err)
 		}
 		for _, error := range errorResponse.Errors {
 			utils.PrettyPrint(error)
@@ -56,57 +59,89 @@ func IsResponseOK(response *http.Response) bool {
 	return responseOK
 }
 
-func IsRateLimitOK(resp *http.Response) (bool, int) {
-	timeToReset, err := strconv.Atoi(resp.Header.Get("x-rate-limit-reset"))
+func IsRateLimitResetOK(httpResponse *http.Response) (bool, int) {
+	timeToReset, err := strconv.Atoi(httpResponse.Header.Get("x-rate-limit-reset"))
 	if err != nil {
+		log.Println(err)
 		return false, -1
 	}
-	if resp.StatusCode == 429 {
-		var jsonResponse ErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&jsonResponse); err != nil {
-			log.Println(err)
+	if httpResponse.StatusCode == http.StatusTooManyRequests {
+		var errorResponse ErrorResponse
+		if err := json.NewDecoder(httpResponse.Body).Decode(&errorResponse); err != nil {
+			log.Fatal(err)
+		}
+		for _, v := range errorResponse.Errors {
+			log.Printf("The HTTP status was %d %s, error code: %d, message: %s\n", http.StatusTooManyRequests, http.StatusText(http.StatusTooManyRequests), v.Code, v.Message)
 		}
 		return false, timeToReset
 	}
 	return true, timeToReset
 }
 
-func MakeRequest(request *http.Request) (response *http.Response, err error) {
+func GetRateLimitLimit(httpResponse *http.Response) (rateLimitLimit int) {
+	rateLimitLimit, err := strconv.Atoi(httpResponse.Header.Get("x-rate-limit-limit"))
+	if err != nil {
+		return -1
+	}
+	return
+}
+
+func GetRateLimitRemaining(httpResponse *http.Response) (rateLimitRemaining int) {
+	rateLimitRemaining, err := strconv.Atoi(httpResponse.Header.Get("x-rate-limit-remaining"))
+	if err != nil {
+		return -1
+	}
+	return
+}
+
+func MakeRequest(httpRequest *http.Request) (httpResponse *http.Response, err error) {
 	client := http.Client{
 		Timeout: 60 * time.Second,
 	}
-	response, err = client.Do(request)
+	httpResponse, err = client.Do(httpRequest)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return
 }
 
-func setupHeaders(req *http.Request) {
-	addContentType(req)
-	addBearerToken(req)
-	setUserAgent(req)
+func setupHeaders(httpRequest *http.Request) {
+	addContentType(httpRequest)
+	addBearerToken(httpRequest)
+	setUserAgent(httpRequest)
+	addAcceptEncoding(httpRequest)
 }
 
-func addContentType(req *http.Request) {
-	req.Header.Add("Content-type", "application/json")
+func addContentType(httpRequest *http.Request) {
+	httpRequest.Header.Add("Content-type", "application/json")
 }
 
-func addBearerToken(req *http.Request) {
-	req.Header.Add("Authorization", "Bearer "+config.BearerToken)
+func addBearerToken(httpRequest *http.Request) {
+	httpRequest.Header.Add("Authorization", "Bearer "+config.BearerToken)
 }
 
-func setUserAgent(req *http.Request) {
+func setUserAgent(httpRequest *http.Request) {
 	if config.UserAgent != "" {
-		req.Header.Set("User-Agent", config.UserAgent)
+		httpRequest.Header.Set("User-Agent", config.UserAgent)
 	}
 }
 
-func AddQuery(req *http.Request, queries map[string]string) {
-	q := req.URL.Query()
+func addAcceptEncoding(httpRequest *http.Request) {
+	httpRequest.Header.Add("Accept-Encoding", "gzip")
+}
+
+func AddQuery(httpRequest *http.Request, queries map[string]string) {
+	q := httpRequest.URL.Query()
 	for k, v := range queries {
 		q.Add(k, v)
 	}
-	req.URL.RawQuery = q.Encode()
-	log.Println(req)
+	httpRequest.URL.RawQuery = q.Encode()
+	log.Println(httpRequest)
+}
+
+func CloseBody(closer io.ReadCloser) {
+	err := closer.Close()
+	if err != nil {
+		log.Println(err)
+	}
 }
