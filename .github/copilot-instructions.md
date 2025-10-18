@@ -14,11 +14,12 @@
 - **Filtered stream**: `internal/tweet/filteredstream` contains rule management and stream DTOs. Tests use `newTestService` helpers—mirror that for new methods.
 - **Recent search & counts**: `internal/tweet/recentsearch` and `internal/tweet/recentcount` expose `SearchRecent`/`GetRecentCount` methods that accept query param maps; reuse this pattern for additional pagination or expansions.
 - **Users domain**: `internal/users/lookup` now wraps lookup/block/follow endpoints in a single service. Legacy `block/` and `follow/` helpers are deprecated—avoid reviving them.
+- **Tweet publish**: `internal/tweet/publish` implements create/delete operations. Request structs (`CreateTweetRequest`) stay minimal—extend them cautiously when adding optional API fields.
 - **Sampled stream**: `internal/tweet/sampledstream` remains a stub; fix the malformed URL if you plan to ship sampled stream support.
 
 ## CLI Commands (`cmd/ctw`)
 - Root command wires `--bearer-token`, `--base-url`, and `--user-agent` flags into `client.Config`.
-- Subcommands: `stream`, `stream rules add|list`, `search recent`, `counts recent|all`, and `users` (lookup, block, unblock, follow, unfollow). Follow existing usage patterns when adding new commands.
+- Subcommands: `stream`, `stream rules add|list`, `search recent`, `counts recent|all`, `users` (lookup, block, unblock, follow, unfollow), and `tweets` (create, delete). Follow existing usage patterns when adding new commands.
 - Helper utilities (`helpers.go`) contain `printJSON`, `printRateLimits`, and `parseKeyValuePairs`; reuse them instead of duplicating formatting logic.
 
 ## Testing & Tooling
