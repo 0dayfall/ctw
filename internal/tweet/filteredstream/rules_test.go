@@ -1,21 +1,21 @@
 package tweet
 
 import (
+	"context"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
-
 func TestAddRuleDryRun(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+	service := newTestService(t, func(res http.ResponseWriter, req *http.Request) {
+		require.Equal(t, http.MethodPost, req.Method)
+		require.Equal(t, "/2/tweets/search/stream/rules", req.URL.Path)
+		require.Equal(t, "true", req.URL.Query().Get("dry_run"))
+		res.Header().Set("x-rate-limit-limit", "450")
+		res.Header().Set("x-rate-limit-remaining", "449")
+		res.Header().Set("x-rate-limit-reset", "60")
 		res.WriteHeader(http.StatusOK)
 		_, err := res.Write([]byte(`{
 			"data": [{
@@ -34,21 +34,27 @@ func TestAddRuleDryRun(t *testing.T) {
 			}
 		}`))
 		require.NoError(t, err)
-	}))
-	defer func() { testServer.Close() }()
-	rulesBaseUrl = testServer.URL
-	response, err := AddRule(AddCommand{
+	})
+
+	response, rateLimits, err := service.AddRule(context.Background(), AddCommand{
 		Add: []Add{{
 			Value: "cat has:images",
 			Tag:   "cats with images",
 		}},
 	}, true)
+
 	require.NoError(t, err)
 	require.EqualValues(t, 1, response.Meta.Summary.Created)
+	require.Equal(t, 450, rateLimits.Limit)
+	require.Equal(t, 449, rateLimits.Remaining)
+	require.Equal(t, 60, rateLimits.Reset)
 }
 
 func TestAddRule(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+	service := newTestService(t, func(res http.ResponseWriter, req *http.Request) {
+		require.Equal(t, http.MethodPost, req.Method)
+		require.Equal(t, "/2/tweets/search/stream/rules", req.URL.Path)
+		require.Empty(t, req.URL.Query().Get("dry_run"))
 		res.WriteHeader(http.StatusOK)
 		_, err := res.Write([]byte(`{
 			"data": [{
@@ -67,21 +73,23 @@ func TestAddRule(t *testing.T) {
 			}
 		}`))
 		require.NoError(t, err)
-	}))
-	defer func() { testServer.Close() }()
-	rulesBaseUrl = testServer.URL
-	response, err := AddRule(AddCommand{
+	})
+
+	response, _, err := service.AddRule(context.Background(), AddCommand{
 		Add: []Add{{
 			Value: "cat has:images",
 			Tag:   "cats with images",
 		}},
 	}, false)
+
 	require.NoError(t, err)
 	require.EqualValues(t, 1, response.Meta.Summary.Created)
 }
 
 func TestGetRules(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+	service := newTestService(t, func(res http.ResponseWriter, req *http.Request) {
+		require.Equal(t, http.MethodGet, req.Method)
+		require.Equal(t, "/2/tweets/search/stream/rules", req.URL.Path)
 		res.WriteHeader(http.StatusOK)
 		_, err := res.Write([]byte(`{
 			"data": [{
@@ -94,10 +102,10 @@ func TestGetRules(t *testing.T) {
 			}
 		}`))
 		require.NoError(t, err)
-	}))
-	defer func() { testServer.Close() }()
-	rulesBaseUrl = testServer.URL
-	response, err := GetRules()
+	})
+
+	response, _, err := service.GetRules(context.Background())
+
 	require.NoError(t, err)
 	require.Equal(t, "cat has:images", response.Data[0].Value)
 	require.EqualValues(t, "2020-06-16T23:14:06.498Z", response.Meta.Sent.Format("2006-01-02T15:04:05.000Z"))

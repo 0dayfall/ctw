@@ -1,44 +1,95 @@
 package tweet
 
 import (
+	"context"
 	"encoding/json"
-	"log"
-	"net/url"
+	"fmt"
 
-	common "github.com/0dayfall/ctw/internal/data"
-	"github.com/0dayfall/ctw/internal/httphandler"
+	"github.com/0dayfall/ctw/internal/client"
 )
 
 const (
-	recent = "/2/tweets/counts/recent"
-	all    = "/2/tweets/counts/all"
+	recentCountsPath = "/2/tweets/counts/recent"
+	allCountsPath    = "/2/tweets/counts/all"
 )
 
-var (
-	recentBaseURL   = common.APIurl + recent
-	allTweetBaseURL = common.APIurl + all
-)
-
-func getRecentURL(query string, granularity string) string {
-	params := url.Values{}
-	params.Add("query", query)
-	params.Add("granularity", granularity)
-	return recentBaseURL + "?" + params.Encode()
+// Service coordinates tweet count operations.
+type Service struct {
+	client *client.Client
 }
 
-func GetRecentCount(query string, granularity string) (countResponse CountResponse, err error) {
-	req := httphandler.CreateGetRequest(getRecentURL(query, granularity))
+// NewService constructs a Service backed by the provided client.
+func NewService(c *client.Client) *Service {
+	if c == nil {
+		panic("recentcount: nil client")
+	}
+	return &Service{client: c}
+}
 
-	httpResponse, err := httphandler.MakeRequest(req)
-	defer httphandler.CloseBody(httpResponse.Body)
-
-	if !httphandler.IsResponseOK(httpResponse) {
-		return
+// GetRecentCount fetches aggregate tweet counts for the recent endpoint.
+func (s *Service) GetRecentCount(ctx context.Context, query, granularity string, params map[string]string) (CountResponse, client.RateLimitSnapshot, error) {
+	if s == nil {
+		return CountResponse{}, client.RateLimitSnapshot{}, fmt.Errorf("recentcount: nil service")
 	}
 
-	if err = json.NewDecoder(httpResponse.Body).Decode(&countResponse); err != nil {
-		log.Println(err)
+	qp := map[string]string{
+		"query":       query,
+		"granularity": granularity,
+	}
+	for key, value := range params {
+		if key == "query" || key == "granularity" {
+			continue
+		}
+		qp[key] = value
 	}
 
-	return
+	resp, err := s.client.Get(ctx, recentCountsPath, qp)
+	if err != nil {
+		return CountResponse{}, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return CountResponse{}, rateLimits, err
+	}
+
+	var payload CountResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return CountResponse{}, rateLimits, fmt.Errorf("recentcount: decode response: %w", err)
+	}
+
+	return payload, rateLimits, nil
+}
+
+// GetAllCount queries the historical full-archive endpoint.
+func (s *Service) GetAllCount(ctx context.Context, query, granularity string, params map[string]string) (CountResponse, client.RateLimitSnapshot, error) {
+	qp := map[string]string{
+		"query":       query,
+		"granularity": granularity,
+	}
+	for key, value := range params {
+		if key == "query" || key == "granularity" {
+			continue
+		}
+		qp[key] = value
+	}
+
+	resp, err := s.client.Get(ctx, allCountsPath, qp)
+	if err != nil {
+		return CountResponse{}, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return CountResponse{}, rateLimits, err
+	}
+
+	var payload CountResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return CountResponse{}, rateLimits, fmt.Errorf("recentcount: decode response: %w", err)
+	}
+
+	return payload, rateLimits, nil
 }

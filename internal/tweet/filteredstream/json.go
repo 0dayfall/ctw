@@ -28,11 +28,11 @@ type Add struct {
 }
 
 type RulesResponse struct {
-	Data []Data `json:"data"`
-	Meta Meta   `json:"meta"`
+	Data []RuleData `json:"data"`
+	Meta Meta       `json:"meta"`
 }
 
-type Data struct {
+type RuleData struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
 	Tag   string `json:"tag,omitempty"`
@@ -86,4 +86,41 @@ type RulesError struct {
 type StreamResponse struct {
 	Id   string
 	Text string
+}
+
+// StreamEnvelope captures a response from the filtered stream endpoint.
+type StreamEnvelope struct {
+	Data     []StreamTweet  `json:"data"`
+	Includes StreamIncludes `json:"includes"`
+	Errors   []RulesError   `json:"errors,omitempty"`
+	Meta     StreamMeta     `json:"meta,omitempty"`
+}
+
+// StreamTweet represents a Tweet entry in the filtered stream.
+type StreamTweet struct {
+	ID                string    `json:"id"`
+	Text              string    `json:"text"`
+	AuthorID          string    `json:"author_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	PossiblySensitive bool      `json:"possibly_sensitive"`
+	Source            string    `json:"source"`
+	Lang              string    `json:"lang"`
+}
+
+// StreamIncludes captures expanded entities such as users.
+type StreamIncludes struct {
+	Users []StreamUser `json:"users,omitempty"`
+}
+
+// StreamUser represents a user record included alongside tweets.
+type StreamUser struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// StreamMeta carries additional metadata from the endpoint.
+type StreamMeta struct {
+	ResultCount int `json:"result_count"`
 }

@@ -1,37 +1,132 @@
+// Package user provides user lookup and relationship management helpers for
+// the Twitter API v2.
 package user
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"strings"
 
+	"github.com/0dayfall/ctw/internal/client"
 	common "github.com/0dayfall/ctw/internal/data"
-	"github.com/0dayfall/ctw/internal/httphandler"
 )
 
 const (
-	users           = "/2/users"
-	userById        = "/2/users/:id"
-	usersByUsername = "/2/users/by"
-	userByUsername  = "/2/users/by/username/:username"
+	usersPath          = "/2/users"
+	userByIDPath       = "/2/users/%s"
+	usersByUsername    = "/2/users/by"
+	userByUsernamePath = "/2/users/by/username/%s"
 )
 
-func createIDsLookupURL() string {
-	return common.APIurl + users
+// Service coordinates user lookup operations.
+type Service struct {
+	client *client.Client
 }
 
-func createLookupUserByIdURL(id string) string {
-	return common.APIurl + strings.Replace(userById, ":id", id, 1)
+// NewService constructs a Service backed by the provided client.
+func NewService(c *client.Client) *Service {
+	if c == nil {
+		panic("userslookup: nil client")
+	}
+	return &Service{client: c}
 }
 
-func createUsernamesLookupURL() string {
-	return common.APIurl + users
+// LookupID fetches a single user by ID.
+func (s *Service) LookupID(ctx context.Context, id string, params map[string]string) (User, client.RateLimitSnapshot, error) {
+	path := fmt.Sprintf(userByIDPath, id)
+	return s.fetchSingle(ctx, path, params)
 }
 
-func createUsernameLookupURL(username string) string {
-	return common.APIurl + strings.Replace(userByUsername, ":username", username, 1)
+// LookupUsername fetches a single user by username.
+func (s *Service) LookupUsername(ctx context.Context, username string, params map[string]string) (User, client.RateLimitSnapshot, error) {
+	path := fmt.Sprintf(userByUsernamePath, username)
+	return s.fetchSingle(ctx, path, params)
 }
 
+// LookupIDs fetches multiple users by comma-separated IDs.
+func (s *Service) LookupIDs(ctx context.Context, ids []string, params map[string]string) ([]User, client.RateLimitSnapshot, error) {
+	qp := map[string]string{
+		"ids": strings.Join(ids, ","),
+	}
+	for k, v := range params {
+		if k == "ids" {
+			continue
+		}
+		qp[k] = v
+	}
+
+	resp, err := s.client.Get(ctx, usersPath, qp)
+	if err != nil {
+		return nil, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return nil, rateLimits, err
+	}
+
+	var payload UsersResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, rateLimits, fmt.Errorf("userslookup: decode ids response: %w", err)
+	}
+
+	return payload.Data, rateLimits, nil
+}
+
+// LookupUsernames fetches multiple users by username.
+func (s *Service) LookupUsernames(ctx context.Context, usernames []string, params map[string]string) ([]User, client.RateLimitSnapshot, error) {
+	qp := map[string]string{
+		"usernames": strings.Join(usernames, ","),
+	}
+	for k, v := range params {
+		if k == "usernames" {
+			continue
+		}
+		qp[k] = v
+	}
+
+	resp, err := s.client.Get(ctx, usersByUsername, qp)
+	if err != nil {
+		return nil, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return nil, rateLimits, err
+	}
+
+	var payload UsersResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, rateLimits, fmt.Errorf("userslookup: decode usernames response: %w", err)
+	}
+
+	return payload.Data, rateLimits, nil
+}
+
+func (s *Service) fetchSingle(ctx context.Context, path string, params map[string]string) (User, client.RateLimitSnapshot, error) {
+	resp, err := s.client.Get(ctx, path, params)
+	if err != nil {
+		return User{}, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return User{}, rateLimits, err
+	}
+
+	var payload UserResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return User{}, rateLimits, fmt.Errorf("userslookup: decode response: %w", err)
+	}
+
+	return payload.Data, rateLimits, nil
+}
+
+// User describes the Twitter user payload returned by the API.
 type User struct {
 	ID              string          `json:"id"`
 	Name            string          `json:"name"`
@@ -49,12 +144,13 @@ type User struct {
 	WithHeld        WithHeld        `json:"withheld"`
 }
 
+// WithHeld captures withheld information for a user.
 type WithHeld struct {
 	Copyright    bool     `json:"copyright"`
 	CountryCodes []string `json:"country_codes"`
 }
 
-// UserMetricsObj contains details about activity for this user
+// UserMetrics contains activity metrics.
 type UserMetrics struct {
 	Followers int `json:"followers_count"`
 	Following int `json:"following_count"`
@@ -62,60 +158,12 @@ type UserMetrics struct {
 	Listed    int `json:"listed_count"`
 }
 
-func LookupID(id string) (userResponse User, err error) {
-	url := createLookupUserByIdURL(id)
-	req := httphandler.CreateGetRequest(url)
-	httpResponse, err := httphandler.MakeRequest(req)
-	httphandler.CloseBody(httpResponse.Body)
-
-	return
+// UserResponse wraps a single user payload.
+type UserResponse struct {
+	Data User `json:"data"`
 }
 
-func LookupIDs(users []string) (userResponse User, err error) {
-	url := createUsernamesLookupURL()
-	req := httphandler.CreateGetRequest(url)
-	q := req.URL.Query()
-	var userNames string
-	for _, user := range users {
-		userNames += user + ", "
-	}
-	q.Add("usernames", userNames)
-	req.URL.RawQuery = q.Encode()
-	httpResponse, err := httphandler.MakeRequest(req)
-	httphandler.CloseBody(httpResponse.Body)
-
-	if err := json.NewDecoder(httpResponse.Body).Decode(&userResponse); err != nil {
-		log.Println(err)
-	}
-	return
-}
-
-func LookupUsername(user string) (userResponse User, err error) {
-	url := createUsernameLookupURL(user)
-	req := httphandler.CreateGetRequest(url)
-	httpResponse, err := httphandler.MakeRequest(req)
-	httphandler.CloseBody(httpResponse.Body)
-
-	if err := json.NewDecoder(httpResponse.Body).Decode(&userResponse); err != nil {
-		log.Println(err)
-	}
-	return
-}
-
-func LookupUsernames(users []string) (userResponse User, err error) {
-	url := createUsernamesLookupURL()
-	req := httphandler.CreateGetRequest(url)
-	q := req.URL.Query()
-	userNames := strings.Join(users[:], ",")
-	q.Add("usernames", userNames)
-	req.URL.RawQuery = q.Encode()
-	log.Println("GET " + req.URL.String())
-	httpResponse, err := httphandler.MakeRequest(req)
-	httphandler.CloseBody(httpResponse.Body)
-	httphandler.IsResponseOK(httpResponse)
-
-	if err := json.NewDecoder(httpResponse.Body).Decode(&userResponse); err != nil {
-		log.Println(err)
-	}
-	return
+// UsersResponse wraps multiple user payloads.
+type UsersResponse struct {
+	Data []User `json:"data"`
 }

@@ -1,53 +1,65 @@
 package tweet
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 
-	common "github.com/0dayfall/ctw/internal/data"
-	httphandler "github.com/0dayfall/ctw/internal/httphandler"
+	"github.com/0dayfall/ctw/internal/client"
 )
 
-const (
-	search = "/2/tweets/search/recent"
-)
+const recentSearchPath = "/2/tweets/search/recent"
 
-var (
-	recentSearchBaseURL = common.APIurl + search
-)
-
-func SearchRecent(queryString string) (searchRecentResponse SearchRecentResponse, resultCount int, nextToken string, err error) {
-	req := httphandler.CreateGetRequest(recentSearchBaseURL)
-	httphandler.AddQuery(req, map[string]string{"query": queryString})
-	resp, err := httphandler.MakeRequest(req)
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
-
-	if err = json.NewDecoder(resp.Body).Decode(&searchRecentResponse); err != nil {
-		log.Println(err)
-	}
-	resultCount = searchRecentResponse.Meta.ResultCount
-	nextToken = searchRecentResponse.Meta.NextToken
-	return
+// Service exposes helpers for the recent search endpoints.
+type Service struct {
+	client *client.Client
 }
 
-func SearchRecentNextToken(queryString string, token string) (searchRecentResponse SearchRecentResponse, resultCount int, nextToken string, err error) {
-	req := httphandler.CreateGetRequest(recentSearchBaseURL)
-	httphandler.AddQuery(req, map[string]string{
-		"query":            queryString,
-		"pagination_token": token,
-	})
-	httpResponse, err := httphandler.MakeRequest(req)
-	defer httphandler.CloseBody(httpResponse.Body)
-
-	if err = json.NewDecoder(httpResponse.Body).Decode(&searchRecentResponse); err != nil {
-		log.Println(err)
+// NewService constructs a Service backed by the provided client.
+func NewService(c *client.Client) *Service {
+	if c == nil {
+		panic("recentsearch: nil client")
 	}
-	resultCount = searchRecentResponse.Meta.ResultCount
-	nextToken = searchRecentResponse.Meta.NextToken
-	return
+	return &Service{client: c}
+}
+
+// SearchRecent queries the recent search endpoint with optional query parameters.
+// The query string is always applied while the params map can be used for
+// pagination or additional expansions.
+func (s *Service) SearchRecent(ctx context.Context, query string, params map[string]string) (SearchRecentResponse, client.RateLimitSnapshot, error) {
+	if s == nil {
+		return SearchRecentResponse{}, client.RateLimitSnapshot{}, fmt.Errorf("recentsearch: nil service")
+	}
+
+	qp := map[string]string{"query": query}
+	for key, value := range params {
+		if key == "query" {
+			continue
+		}
+		qp[key] = value
+	}
+
+	resp, err := s.client.Get(ctx, recentSearchPath, qp)
+	if err != nil {
+		return SearchRecentResponse{}, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return SearchRecentResponse{}, rateLimits, err
+	}
+
+	var payload SearchRecentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return SearchRecentResponse{}, rateLimits, fmt.Errorf("recentsearch: decode response: %w", err)
+	}
+
+	return payload, rateLimits, nil
+}
+
+// SearchRecentNextToken is a convenience wrapper that applies a pagination token.
+func (s *Service) SearchRecentNextToken(ctx context.Context, query, token string) (SearchRecentResponse, client.RateLimitSnapshot, error) {
+	params := map[string]string{"pagination_token": token}
+	return s.SearchRecent(ctx, query, params)
 }

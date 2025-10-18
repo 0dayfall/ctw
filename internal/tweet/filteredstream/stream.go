@@ -1,33 +1,14 @@
 package tweet
 
 import (
-	"encoding/json"
-	"log"
-	"net/url"
+	"context"
 
-	common "github.com/0dayfall/ctw/internal/data"
-	"github.com/0dayfall/ctw/internal/httphandler"
+	"github.com/0dayfall/ctw/internal/client"
 )
 
-var (
-	streamUrl = common.APIurl + rules
-)
-
-func createStreamUrlWithFields(fields map[string]string) string {
-	params := url.Values{}
-	for key, value := range fields {
-		params.Add(key, value)
-	}
-	return streamUrl + "?" + params.Encode()
-}
-
-func Stream(fields map[string]string) (jsonResponse map[string]interface{}, err error) {
-	httpRequest := httphandler.CreateGetRequest(createStreamUrlWithFields(fields))
-	httpResponse, err := httphandler.MakeRequest(httpRequest)
-	defer httphandler.CloseBody(httpResponse.Body)
-
-	if err := json.NewDecoder(httpResponse.Body).Decode(&jsonResponse); err != nil {
-		log.Println(err)
-	}
-	return
+// Stream is a convenience wrapper that constructs a Service on the fly and
+// proxies to its Stream method. New code should prefer using a shared Service
+// instance directly so that HTTP client configuration can be reused.
+func Stream(ctx context.Context, c *client.Client, fields map[string]string) (StreamEnvelope, client.RateLimitSnapshot, error) {
+	return NewService(c).Stream(ctx, fields)
 }
