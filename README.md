@@ -5,8 +5,8 @@ A Go 1.18 command-line toolkit for working with selected Twitter v2 REST endpoin
 ## Features
 
 - Configurable HTTP client (`internal/client`) with bearer-token auth, user-agent overrides, and rate-limit parsing.
-- Service wrappers for filtered stream, recent search, recent counts, and user relationship endpoints under `internal/tweet` and `internal/users`.
-- Cobra-powered CLI in `cmd/ctw` with commands: `stream`, `search recent`, `counts recent|all`, `users lookup|block|unblock|follow|unfollow`, and `tweets create|delete`.
+- Service wrappers for tweets (timelines, likes, retweets, bookmarks, lookup, publish), users (lookup, relationships), direct messages, filtered stream, and search/counts.
+- Cobra-powered CLI in `cmd/ctw` with commands: `stream`, `search`, `counts`, `users`, `tweets`, `dms`, `likes`, `retweets`, `bookmarks`, and `timelines`.
 
 ## Getting Started
 
@@ -55,6 +55,35 @@ ctw users follow --source-id 123 --target-id 456
 # Publish and delete tweets
 ctw tweets create --text "automation ready"
 ctw tweets delete --id 1234567890
+
+# Direct messages
+ctw dms send --user-id 987654321 --text "hey there"
+ctw dms list --param pagination_token=abc123
+ctw dms delete --id event-123
+
+# Likes
+ctw likes add --user-id 123 --tweet-id 456
+ctw likes remove --user-id 123 --tweet-id 456
+ctw likes list --user-id 123
+
+# Retweets
+ctw retweets add --user-id 123 --tweet-id 789
+ctw retweets remove --user-id 123 --tweet-id 789
+ctw retweets list --tweet-id 789
+
+# Bookmarks
+ctw bookmarks add --user-id 123 --tweet-id 999
+ctw bookmarks remove --user-id 123 --tweet-id 999
+ctw bookmarks list --user-id 123
+
+# Timelines
+ctw timelines user --user-id 123 --param max_results=10
+ctw timelines mentions --user-id 123
+ctw timelines home --user-id 123
+
+# Tweet lookup
+ctw tweets get --id 1234567890
+ctw tweets get --ids "123,456,789"
 ```
 
 ## Testing
@@ -134,6 +163,77 @@ ctw users lookup --ids "2244994945,6253282"
 # Mutate relationships
 ctw users follow --source-id 1 --target-id 2
 ctw users block --source-id 1 --target-id 3
+```
+
+### Direct Messages
+
+```bash
+# Send a DM to a user
+ctw dms send --user-id 2244994945 --text "Hello from ctw"
+
+# List DM events with pagination
+ctw dms list --param "pagination_token=some-token"
+
+# Delete a DM event
+ctw dms delete --id event-123
+```
+
+### Tweets
+
+```bash
+# Create and delete tweets
+ctw tweets create --text "Hello Twitter"
+ctw tweets delete --id 1234567890
+
+# Fetch tweets by ID
+ctw tweets get --id 1234567890
+ctw tweets get --ids "123,456,789" --param "tweet.fields=created_at"
+```
+
+### Likes
+
+```bash
+# Like and unlike tweets
+ctw likes add --user-id 123 --tweet-id 456
+ctw likes remove --user-id 123 --tweet-id 456
+
+# List liked tweets
+ctw likes list --user-id 123 --param max_results=20
+```
+
+### Retweets
+
+```bash
+# Retweet and unretweet
+ctw retweets add --user-id 123 --tweet-id 789
+ctw retweets remove --user-id 123 --tweet-id 789
+
+# List retweeters
+ctw retweets list --tweet-id 789
+```
+
+### Bookmarks
+
+```bash
+# Add and remove bookmarks
+ctw bookmarks add --user-id 123 --tweet-id 999
+ctw bookmarks remove --user-id 123 --tweet-id 999
+
+# List bookmarks
+ctw bookmarks list --user-id 123
+```
+
+### Timelines
+
+```bash
+# Get user's tweets
+ctw timelines user --user-id 123 --param max_results=10
+
+# Get mentions
+ctw timelines mentions --user-id 456
+
+# Get home timeline
+ctw timelines home --user-id 789
 ```
 
 ## Development
