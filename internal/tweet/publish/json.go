@@ -2,7 +2,13 @@ package publish
 
 // CreateTweetRequest represents the minimal payload required to create a tweet.
 type CreateTweetRequest struct {
-	Text string `json:"text,omitempty"`
+	Text  string `json:"text,omitempty"`
+	Media *Media `json:"media,omitempty"`
+}
+
+// Media represents media attachments for a tweet.
+type Media struct {
+	MediaIDs []string `json:"media_ids,omitempty"`
 }
 
 // CreateTweetResponse captures the response payload for POST /2/tweets.

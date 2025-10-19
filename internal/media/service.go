@@ -16,21 +16,23 @@ import (
 )
 
 const (
-	uploadBaseURL = "https://upload.twitter.com/1.1/media/"
-	chunkSize     = 5 * 1024 * 1024 // 5MB chunks
+	defaultUploadBaseURL = "https://upload.twitter.com/1.1/media/"
+	chunkSize            = 5 * 1024 * 1024 // 5MB chunks
 )
 
 // Service coordinates Twitter media upload operations.
 type Service struct {
-	bearerToken string
-	httpClient  *http.Client
+	bearerToken   string
+	httpClient    *http.Client
+	uploadBaseURL string
 }
 
 // NewService constructs a Service with the provided bearer token.
 func NewService(bearerToken string) *Service {
 	return &Service{
-		bearerToken: bearerToken,
-		httpClient:  &http.Client{Timeout: 120 * time.Second},
+		bearerToken:   bearerToken,
+		httpClient:    &http.Client{Timeout: 120 * time.Second},
+		uploadBaseURL: defaultUploadBaseURL,
 	}
 }
 
@@ -63,7 +65,8 @@ func (s *Service) UploadFile(ctx context.Context, filePath string, category Medi
 	}
 
 	// APPEND phase - upload in chunks
-	if err := s.appendChunks(ctx, file, initResp.MediaIDString, fileSize); err != nil {
+	err = s.appendChunks(ctx, file, initResp.MediaIDString, fileSize)
+	if err != nil {
 		return "", fmt.Errorf("media: append chunks: %w", err)
 	}
 
@@ -152,16 +155,18 @@ func (s *Service) appendChunk(ctx context.Context, mediaID string, segmentIndex 
 	if err != nil {
 		return fmt.Errorf("create form file: %w", err)
 	}
-	if _, err := part.Write(data); err != nil {
+	_, err = part.Write(data)
+	if err != nil {
 		return fmt.Errorf("write chunk data: %w", err)
 	}
 
 	contentType := writer.FormDataContentType()
-	if err := writer.Close(); err != nil {
+	err = writer.Close()
+	if err != nil {
 		return fmt.Errorf("close multipart writer: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", uploadBaseURL+"upload.json", &body)
+	req, err := http.NewRequestWithContext(ctx, "POST", s.uploadBaseURL+"upload.json", &body)
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
@@ -284,7 +289,7 @@ func (s *Service) checkStatus(ctx context.Context, mediaID string) (*StatusRespo
 }
 
 func (s *Service) newRequest(ctx context.Context, method, path string, params url.Values, body io.Reader) (*http.Request, error) {
-	u := uploadBaseURL + path
+	u := s.uploadBaseURL + path
 	if len(params) > 0 {
 		u += "?" + params.Encode()
 	}

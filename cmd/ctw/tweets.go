@@ -34,6 +34,7 @@ func newTweetsCreateCommand() *cobra.Command {
 	var (
 		text     string
 		filePath string
+		mediaIDs string
 	)
 
 	cmd := &cobra.Command{
@@ -56,8 +57,8 @@ func newTweetsCreateCommand() *cobra.Command {
 				text = strings.TrimSpace(string(contents))
 			}
 
-			if text == "" {
-				return errors.New("tweet text is empty")
+			if text == "" && mediaIDs == "" {
+				return errors.New("tweet text or media is required")
 			}
 
 			ctx := cmd.Context()
@@ -70,8 +71,17 @@ func newTweetsCreateCommand() *cobra.Command {
 				return err
 			}
 
+			req := publish.CreateTweetRequest{Text: text}
+			if mediaIDs != "" {
+				ids := strings.Split(mediaIDs, ",")
+				for i, id := range ids {
+					ids[i] = strings.TrimSpace(id)
+				}
+				req.Media = &publish.Media{MediaIDs: ids}
+			}
+
 			service := publish.NewService(c)
-			response, rateLimits, err := service.CreateTweet(ctx, publish.CreateTweetRequest{Text: text})
+			response, rateLimits, err := service.CreateTweet(ctx, req)
 			if err != nil {
 				return err
 			}
@@ -86,6 +96,7 @@ func newTweetsCreateCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&text, "text", "", "Tweet text content")
 	cmd.Flags().StringVar(&filePath, "file", "", "Path to file containing tweet text")
+	cmd.Flags().StringVar(&mediaIDs, "media-ids", "", "Comma-separated media IDs from media upload")
 
 	return cmd
 }
