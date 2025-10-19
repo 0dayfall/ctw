@@ -14,7 +14,9 @@ This guide will help you set up automated releases with GoReleaser for the `ctw`
 ### macOS
 ```bash
 brew install goreleaser/tap/goreleaser
-```
+``# Add to your ~/.bashrc or ~/.zshrc
+echo 'export HOMEBREW_TAP_GITHUB_TOKEN="ghp_your_token_here"' >> ~/.zshrc
+source ~/.zshrc`
 
 ### Linux
 ```bash

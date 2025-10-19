@@ -1,340 +1,333 @@
-# ctw
+# ctw - Command-Line Twitter Client
 
-A Go 1.18 command-line toolkit for working with Twitter v2 REST endpoints, with powerful **real-time tweet streaming** and keyword monitoring.
+**A scriptable CLI for automating Twitter workflows using the Twitter v2 API.**
 
-## ✨ Key Features
+Perfect for building bots, monitoring social media, aggregating content, or integrating Twitter into your automation pipelines. Single binary, JSON output, works with standard Unix tools.
 
-- **🔴 Real-time Tweet Streaming** - Watch tweets matching keywords as they happen
-- **🔍 Filtered Stream** - Screen tweets for specific keywords, hashtags, users, or complex rules
-- **📊 Tweet Analytics** - Track timelines, likes, retweets, bookmarks
-- **📤 Publishing** - Create tweets, upload media, send DMs
-- **👥 User Management** - Lookup users, manage follows/blocks
-- **🔧 Flexible** - Configurable HTTP client with bearer-token auth and rate-limit tracking
+## Why ctw?
 
-## Quick Start: Tweet Streaming
+- **🤖 Built for Automation** - JSON output, exit codes, environment variables - integrates seamlessly with bash, cron, systemd
+- **� Complete API Coverage** - Tweets, DMs, users, media upload, streaming, likes, retweets, bookmarks, timelines
+- **⚡ Single Binary** - No runtime dependencies, just download and run
+- **� Script-Friendly** - Pipeable output, works with `jq`, `grep`, `awk` and other Unix tools
+- **� Real-Time Processing** - Monitor tweets as they happen using Twitter's filtered stream API
+- **🚀 Production-Ready** - Rate-limit handling, error reporting, comprehensive logging
 
-Watch tweets for keywords in real-time:
+## Quick Start
 
 ```bash
-# Set your Twitter API bearer token
+# Install (macOS)
+brew tap 0dayfall/tap && brew install ctw
+
+# Configure
 export BEARER_TOKEN="your_twitter_bearer_token"
 
-# Watch for keywords (auto-setup stream rules)
-ctw watch --keyword "golang" --auto-setup --show-user
-
-# Monitor multiple keywords
-ctw watch --keyword "bitcoin" --keyword "crypto" --auto-setup
-
-# Track your brand mentions
-ctw watch --keyword "@YourCompany" --keyword "YourProduct" --auto-setup
+# Start automating
+ctw search recent --query "golang" | jq -r '.data[].text'
+ctw users lookup --usernames "github,golang"
+ctw tweets create --text "Hello from automation!"
 ```
 
-**📚 Documentation:**
-- [KEYWORD_SCREENING.md](KEYWORD_SCREENING.md) - Quick reference for keyword screening
-- [STREAMING.md](STREAMING.md) - Comprehensive streaming guide with examples
-- `script/sh/examples/` directory - Ready-to-use shell scripts
+## Common Use Cases
 
-## Features
+### 🔍 Monitor Brand Mentions
+```bash
+# Real-time monitoring with keyword filtering
+ctw watch --keyword "@YourBrand" --auto-setup | grep "urgent"
+```
 
-- Configurable HTTP client (`internal/client`) with bearer-token auth, user-agent overrides, and rate-limit parsing.
-- Service wrappers for tweets (timelines, likes, retweets, bookmarks, lookup, publish), users (lookup, relationships), direct messages, filtered stream, and search/counts.
-- Cobra-powered CLI in `cmd/ctw` with commands: `stream`, `search`, `counts`, `users`, `tweets`, `dms`, `likes`, `retweets`, `bookmarks`, and `timelines`.
+### 📊 Collect Social Data
+```bash
+# Gather tweets for analysis
+ctw search recent --query "climate change" --param "max_results=100" \
+    | jq -r '.data[] | [.created_at, .text] | @csv' > data.csv
+```
+
+### 🤖 Build a Twitter Bot
+```bash
+# Automated content curation
+ctw search recent --query "golang tutorial" --param "max_results=10" \
+    | jq -r '.data[0].id' \
+    | xargs -I {} ctw retweets add --user-id YOUR_ID --tweet-id {}
+```
+
+### 📤 Schedule Posts
+```bash
+# Publish with media (cron job)
+MEDIA_ID=$(ctw media upload --file chart.png | jq -r '.media_id_string')
+ctw tweets create --text "Daily update" --media-ids "$MEDIA_ID"
+```
+
+### 🔔 Get Alerts
+```bash
+# Stream to Slack/Discord webhook
+ctw watch --keyword "BREAKING" --auto-setup \
+    | while read -r line; do curl -X POST $WEBHOOK -d "$line"; done
+```
+
+## Complete Feature Set
+
+**Tweets & Content**
+- Create, delete, and lookup tweets
+- Upload media (images, videos, GIFs) with chunked upload
+- Search recent tweets with filtering
+- Get tweet counts and analytics
+
+**Streaming**
+- Real-time filtered stream with keyword monitoring
+- Rule management (add, list, delete)
+- Watch command for easy keyword tracking
+
+**User Operations**
+- Lookup users by username or ID
+- Follow/unfollow users
+- Block/unblock users
+
+**Engagement**
+- Like/unlike tweets
+- Retweet/unretweet
+- Add/remove bookmarks
+- List liked tweets, bookmarks, retweeters
+
+**Timelines**
+- User tweets timeline
+- Mentions timeline
+- Home timeline (reverse chronological)
+
+**Direct Messages**
+- Send DMs
+- List conversations
+- Delete messages
 
 ## Installation
 
-### macOS (Homebrew)
+**macOS (Homebrew)**
 
 ```bash
-brew tap 0dayfall/tap
-brew install ctw
+brew tap 0dayfall/tap && brew install ctw
 ```
 
-### Ubuntu/Debian (.deb package)
-
-Build and install the `.deb` package:
+**Ubuntu/Debian**
 
 ```bash
+# Download from releases or build locally
 make deb
 sudo dpkg -i build/ctw_<version>_amd64.deb
 ```
 
-### Using GoReleaser (All Platforms)
-
-GoReleaser builds for multiple platforms and handles releases automatically:
+**From Source**
 
 ```bash
-# Install GoReleaser
-brew install goreleaser/tap/goreleaser
-
-# Create a release (requires git tag)
-git tag -a v0.1.0 -m "Release v0.1.0"
-goreleaser release --clean
+git clone https://github.com/0dayfall/ctw.git
+cd ctw
+go build -o ctw ./cmd/ctw
+sudo mv ctw /usr/local/bin/
 ```
 
-For detailed installation instructions including manual builds, see [INSTALL.md](INSTALL.md).
+**Pre-built Binaries**
 
-### From Source
+Download from [releases](https://github.com/0dayfall/ctw/releases) for Linux, macOS, Windows (amd64/arm64).
 
-1. **Install dependencies / tidy modules**
+See [INSTALL.md](INSTALL.md) for detailed installation instructions and [GORELEASER_SETUP.md](GORELEASER_SETUP.md) for building releases.
 
-   ```bash
-   go mod tidy
-   ```
-
-2. **Set credentials**
-
-   ```bash
-   export BEARER_TOKEN="<your twitter bearer token>"
-   # Optional: override defaults
-   export USER_AGENT="my-client/1.0"
-   ```
-
-3. **Build or run the CLI**
-
-   ```bash
-   go run ./cmd/ctw --help
-   go build -o bin/ctw ./cmd/ctw
-   
-   # Or install to /usr/local/bin
-   make build
-   sudo make install
-   ```
-
-## CLI Examples
-
-### Real-Time Streaming
+## Configuration
 
 ```bash
-# Watch tweets for keywords (easiest method)
-ctw watch --keyword "AI" --keyword "machine learning" --auto-setup --show-user
+# Required: Twitter API bearer token
+export BEARER_TOKEN="your_twitter_bearer_token_here"
 
-# Manual stream rule management
-ctw stream rules add --value "golang" --tag "go-lang"
-ctw stream rules add --value "bitcoin OR ethereum" --tag "crypto"
-ctw stream rules list
-ctw stream  # Start streaming
+# Optional: custom user agent
+export USER_AGENT="my-bot/1.0"
 
-# Advanced filtering
-ctw stream rules add --value "cats has:images lang:en -is:retweet"
-ctw watch --keyword "breaking news" --auto-setup
-
-# Delete rules
-ctw stream rules delete --id "rule_id_here"
+# Or pass via flags
+ctw --bearer-token "xxx" search recent --query "test"
 ```
 
-### Tweets & Timelines
+Get your bearer token from [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard).
+
+## Automation Examples
+
+### Real-Time Monitoring
 
 ```bash
-# Stream with selected fields (old method - use watch instead)
-ctw stream --field tweet.fields=created_at --field expansions=author_id
+# Monitor keywords and pipe to processing
+ctw watch --keyword "golang" --auto-setup | grep "tutorial"
 
-# Search and analyze
-ctw search recent --query "golang" --param max_results=20
+# Multi-keyword brand monitoring
+ctw watch --keyword "@YourBrand" --keyword "YourProduct" --auto-setup --show-user
 
-# User timelines
-ctw timelines user --user-id 123 --param max_results=10
-
-# Add a filtered stream rule (dry run)
-ctw stream rules add --value "cats has:images" --tag "cats" --dry-run
-
-# Recent search with pagination token
-ctw search recent --query "golang" --param max_results=20 --next-token <token>
-
-# Tweet counts (recent)
-ctw counts recent --query "from:TwitterDev" --granularity hour
-
-# Lookup multiple usernames
-ctw users lookup --usernames alice,bob --param "user.fields=created_at"
-
-# Follow a user
-ctw users follow --source-id 123 --target-id 456
-
-# Publish and delete tweets
-ctw tweets create --text "automation ready"
-ctw tweets delete --id 1234567890
-
-# Direct messages
-ctw dms send --user-id 987654321 --text "hey there"
-ctw dms list --param pagination_token=abc123
-ctw dms delete --id event-123
-
-# Likes
-ctw likes add --user-id 123 --tweet-id 456
-ctw likes remove --user-id 123 --tweet-id 456
-ctw likes list --user-id 123
-
-# Retweets
-ctw retweets add --user-id 123 --tweet-id 789
-ctw retweets remove --user-id 123 --tweet-id 789
-ctw retweets list --tweet-id 789
-
-# Bookmarks
-ctw bookmarks add --user-id 123 --tweet-id 999
-ctw bookmarks remove --user-id 123 --tweet-id 999
-ctw bookmarks list --user-id 123
-
-# Timelines
-ctw timelines user --user-id 123 --param max_results=10
-ctw timelines mentions --user-id 123
-ctw timelines home --user-id 123
-
-# Tweet lookup
-ctw tweets get --id 1234567890
-ctw tweets get --ids "123,456,789"
-
-# Media upload
-ctw media upload --file path/to/image.jpg --category tweet_image
-ctw tweets create --text "check this out" --media-ids "1234567890"
+# Stream with complex rules
+ctw stream rules add --value "bitcoin OR ethereum lang:en -is:retweet"
+ctw stream
 ```
 
-## Testing
+### Data Collection & Analysis
 
-Unit tests are colocated with their services and rely on `httptest.Server` helpers for determinism. Run the full suite with:
+```bash
+# Search and extract with jq
+ctw search recent --query "AI ethics" --param "max_results=100" \
+    | jq -r '.data[] | [.author_id, .text] | @csv'
+
+# Get tweet counts over time
+ctw counts recent --query "climate change" --granularity day
+
+# Monitor user activity
+ctw timelines user --user-id 123 --param "max_results=50"
+```
+
+### Content Publishing
+
+```bash
+# Simple tweet
+ctw tweets create --text "Hello from automation"
+
+# Tweet with media
+MEDIA=$(ctw media upload --file chart.png --category tweet_image | jq -r '.media_id_string')
+ctw tweets create --text "Daily metrics" --media-ids "$MEDIA"
+
+# Scheduled via cron: 0 9 * * * /usr/local/bin/post_daily_update.sh
+```
+
+### User Management
+
+```bash
+# Lookup users
+ctw users lookup --usernames "github,golang,docker"
+ctw users lookup --ids "123,456,789"
+
+# Manage relationships
+ctw users follow --source-id YOUR_ID --target-id 123
+ctw users block --source-id YOUR_ID --target-id 456
+```
+
+### Engagement Automation
+
+```bash
+# Like tweets matching criteria
+ctw search recent --query "open source" --param "max_results=10" \
+    | jq -r '.data[].id' \
+    | xargs -I {} ctw likes add --user-id YOUR_ID --tweet-id {}
+
+# Retweet quality content
+ctw retweets add --user-id YOUR_ID --tweet-id 1234567890
+
+# Manage bookmarks
+ctw bookmarks add --user-id YOUR_ID --tweet-id 9876543210
+ctw bookmarks list --user-id YOUR_ID
+```
+
+### Scripting Patterns
+
+```bash
+# Error handling with exit codes
+if ctw tweets create --text "test"; then
+    echo "Posted successfully"
+else
+    echo "Failed with code $?"
+fi
+
+# Loop through results
+ctw search recent --query "golang" | jq -r '.data[].text' | while read -r tweet; do
+    echo "Processing: $tweet"
+done
+
+# Combine multiple operations
+USER_ID=$(ctw users lookup --usernames "twitter" | jq -r '.data[0].id')
+ctw timelines user --user-id "$USER_ID"
+```
+
+## Command Reference
+
+For detailed help on any command:
+
+```bash
+ctw --help
+ctw stream --help
+ctw search --help
+# ... etc
+```
+
+**Available Commands:**
+- `watch` - Monitor tweets with keyword filtering (easiest)
+- `stream` - Manage filtered stream rules and connect
+- `search` - Search recent or all tweets
+- `counts` - Get tweet count aggregations
+- `tweets` - Create, delete, and lookup tweets
+- `users` - Lookup users and manage relationships
+- `timelines` - Get user, mentions, and home timelines
+- `likes` - Like, unlike, and list liked tweets
+- `retweets` - Retweet, unretweet, and list retweeters
+- `bookmarks` - Add, remove, and list bookmarks
+- `dms` - Send, list, and delete direct messages
+- `media` - Upload images, videos, and GIFs
+
+## Documentation
+
+- **[AUTOMATION.md](AUTOMATION.md)** - Comprehensive automation guide with real-world examples
+- **[STREAMING.md](STREAMING.md)** - Detailed guide to Twitter's filtered stream API
+- **[KEYWORD_SCREENING.md](KEYWORD_SCREENING.md)** - Quick reference for keyword filtering
+- **[INSTALL.md](INSTALL.md)** - Installation instructions for all platforms
+- **[script/sh/examples/](script/sh/examples/)** - Ready-to-use automation scripts
+
+## How It Works
+
+`ctw` is a thin CLI wrapper around the Twitter v2 API. It handles:
+
+- **Authentication** - Bearer token management
+- **HTTP** - Configurable client with rate-limit tracking
+- **JSON** - Type-safe request/response handling
+- **Errors** - Proper exit codes and error messages
+- **Streaming** - Real-time filtered stream processing
+
+All commands output JSON to stdout and logs/errors to stderr, making it perfect for Unix pipelines and automation scripts.
+
+## Project Structure
+
+```text
+cmd/ctw/             # CLI commands (Cobra)
+internal/client/     # HTTP client with auth and rate-limits
+internal/tweet/      # Tweet services (publish, search, stream, likes, etc.)
+internal/users/      # User services (lookup, follow, block)
+internal/media/      # Media upload (chunked upload for large files)
+internal/dm/         # Direct message services
+script/sh/           # Shell script examples and testing utilities
+```
+
+## Development
+
+**Run tests:**
 
 ```bash
 go test ./...
 ```
 
-No tests hit live Twitter endpoints. If you introduce integration tests, guard them with `t.Skip` unless credentials are configured.
+Tests use `httptest.Server` mocks - no live API calls required.
 
-## Project Structure
-
-```text
-cmd/ctw          # Cobra CLI entrypoint and commands
-internal/client  # Shared HTTP client abstraction
-internal/data    # Shared DTOs
-internal/tweet   # Tweet-related services (lookup, publish, timelines, likes, retweets, bookmarks)
-internal/users   # User lookup & relationship services
-internal/media   # Media upload service (chunked upload to upload.twitter.com)
-internal/dm      # Direct messages service
-script/sh        # Shell scripts for testing and examples
-```
-
-## Contributing
-
-- Follow the existing service pattern: accept `context.Context`, build query maps, decode into typed structs, return `client.RateLimitSnapshot` alongside responses.
-- Keep the CLI thin—parse flags, call a service, print JSON, and surface rate-limit metadata via `printRateLimits`.
-
-Command-line toolkit for exploring Twitter v2 REST endpoints. The project is written in Go 1.18 and ships as a Cobra-based CLI bundled with reusable service packages under `internal/`.
-
-## Prerequisites
-
-- Go 1.18 or newer
-- Twitter API bearer token (`BEARER_TOKEN` environment variable)
-
-## Usage
-
-All commands read credentials from the `BEARER_TOKEN` environment variable. You can override authentication or base URL per invocation via flags (`--bearer-token`, `--base-url`, `--user-agent`).
-
-### Filtered Stream
+**Build locally:**
 
 ```bash
-# List existing rules
-ctw stream rules list
-
-# Add a dry-run rule
-ctw stream rules add --value "cats has:images" --tag "cat-images" --dry-run
-
-# Start streaming with selected fields
-ctw stream --field "tweet.fields=created_at" --field "expansions=author_id"
+make build        # Builds to bin/ctw
+make install      # Installs to /usr/local/bin
+make deb          # Creates .deb package
 ```
 
-### Recent Search and Counts
+**Contributing:**
+
+- Follow the service pattern: accept `context.Context`, return typed structs + `client.RateLimitSnapshot`
+- Keep CLI commands thin - parse flags, call service, print JSON
+- Add tests using `httptest.Server` helpers
+- Update documentation when adding features
+
+## API Rate Limits
+
+Twitter API has rate limits. `ctw` tracks and reports rate-limit headers:
 
 ```bash
-# Fetch recent tweets
-ctw search recent --query "golang lang:en" --param "max_results=10"
-
-# Aggregate tweet counts
-ctw counts recent --query "golang" --granularity hour
-ctw counts all --query "from:TwitterDev" --granularity day
+ctw search recent --query "test" 2>&1 | grep "Rate Limit"
 ```
 
-### Users
+Rate limits vary by endpoint. See [Twitter's documentation](https://developer.twitter.com/en/docs/twitter-api/rate-limits) for details.
 
-```bash
-# Lookup users
-ctw users lookup --username TwitterDev
-ctw users lookup --ids "2244994945,6253282"
+## License
 
-# Mutate relationships
-ctw users follow --source-id 1 --target-id 2
-ctw users block --source-id 1 --target-id 3
-```
-
-### Direct Messages
-
-```bash
-# Send a DM to a user
-ctw dms send --user-id 2244994945 --text "Hello from ctw"
-
-# List DM events with pagination
-ctw dms list --param "pagination_token=some-token"
-
-# Delete a DM event
-ctw dms delete --id event-123
-```
-
-### Tweets
-
-```bash
-# Create and delete tweets
-ctw tweets create --text "Hello Twitter"
-ctw tweets delete --id 1234567890
-
-# Fetch tweets by ID
-ctw tweets get --id 1234567890
-ctw tweets get --ids "123,456,789" --param "tweet.fields=created_at"
-```
-
-### Likes
-
-```bash
-# Like and unlike tweets
-ctw likes add --user-id 123 --tweet-id 456
-ctw likes remove --user-id 123 --tweet-id 456
-
-# List liked tweets
-ctw likes list --user-id 123 --param max_results=20
-```
-
-### Retweets
-
-```bash
-# Retweet and unretweet
-ctw retweets add --user-id 123 --tweet-id 789
-ctw retweets remove --user-id 123 --tweet-id 789
-
-# List retweeters
-ctw retweets list --tweet-id 789
-```
-
-### Bookmarks
-
-```bash
-# Add and remove bookmarks
-ctw bookmarks add --user-id 123 --tweet-id 999
-ctw bookmarks remove --user-id 123 --tweet-id 999
-
-# List bookmarks
-ctw bookmarks list --user-id 123
-```
-
-### Timelines
-
-```bash
-# Get user's tweets
-ctw timelines user --user-id 123 --param max_results=10
-
-# Get mentions
-ctw timelines mentions --user-id 456
-
-# Get home timeline
-ctw timelines home --user-id 789
-```
-
-## Development
-
-- Services live under `internal/` and accept a shared `client.Client` for HTTP access.
-- Unit tests use `httptest.Server` fixtures; run them with `go test ./...`.
-- Scripts under `script/sh` contain raw curl examples that mirror the CLI behaviour.
+See [LICENSE](LICENSE) file.

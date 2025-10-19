@@ -1,104 +1,121 @@
-# Script Directory
+# Scripts for ctw Automation
 
-This directory contains shell scripts for working with the Twitter API and `ctw` CLI.
+Shell scripts demonstrating how to automate Twitter workflows with `ctw`.
+
+## Purpose
+
+These scripts show you how to:
+- Validate your environment setup
+- Use `ctw` in automation pipelines
+- Integrate Twitter data with other tools
+- Build real-time monitoring systems
 
 ## Structure
 
-- **sh/** - Shell scripts for direct API calls and CLI usage
-  - **examples/** - Ready-to-use example scripts for common use cases
-  - Legacy curl-based scripts for testing
+- **sh/examples/** - Production-ready automation scripts
+- **sh/** - Testing utilities and low-level API examples
 
-## Examples Directory
+## Quick Start
 
-The `sh/examples/` folder contains practical scripts demonstrating `ctw` usage:
+1. **Validate your setup:**
+   ```bash
+   ./script/sh/test_env.sh
+   ```
 
-### Stream Monitoring Examples
+2. **Run an automation example:**
+   ```bash
+   ./script/sh/examples/watch_golang.sh
+   ```
 
-**watch_golang.sh** - Watch tweets about Go programming in real-time
+3. **Integrate with your pipeline:**
+   ```bash
+   ctw search recent --query "AI" | jq -r '.data[].text' | your_script.sh
+   ```
+
+## Automation Examples
+
+Located in `sh/examples/` - ready to use in production:
+
+**watch_golang.sh**  
+Monitor Go programming discussions in real-time. Shows how to use `ctw watch` with multiple keywords.
+
+**monitor_crypto.sh**  
+Track cryptocurrency tweets with filtering. Demonstrates real-time data collection.
+
+**advanced_rules.sh**  
+Complex Boolean filtering with Twitter's rule syntax. Shows advanced stream management.
+
+## Testing Utilities
+
+Located in `sh/` - for environment validation and API exploration:
+
+**test_env.sh**  
+Validates your setup: checks `BEARER_TOKEN`, finds `ctw` binary, verifies dependencies (`jq`, `curl`).
+
+**validate_twitter_stream.sh**  
+Tests API connectivity and lists active stream rules.
+
+**connect_to_stream.sh**, **twitter_stream.sh**, **delete_rule.sh**, **block.sh**  
+Low-level curl examples showing raw API usage. For production, use the `ctw` CLI instead.
+
+## Usage Patterns
+
+**Pattern 1: Real-Time Monitoring**
+
 ```bash
-./script/sh/examples/watch_golang.sh
+# Monitor and process tweets as they arrive
+ctw watch --keyword "urgent" --auto-setup | while read -r line; do
+    # Your processing logic here
+    echo "$line" | send_to_slack.sh
+done
 ```
 
-**monitor_crypto.sh** - Monitor cryptocurrency discussions with multiple keywords
+**Pattern 2: Data Collection**
+
 ```bash
-./script/sh/examples/monitor_crypto.sh
+# Collect tweets for analysis
+ctw search recent --query "data science" --param "max_results=100" \
+    | jq -r '.data[] | [.id, .text, .created_at] | @csv' \
+    > tweets.csv
 ```
 
-**advanced_rules.sh** - Demonstrates complex stream rule management
+**Pattern 3: Scheduled Automation**
+
 ```bash
-./script/sh/examples/advanced_rules.sh
+# Add to crontab for scheduled runs
+0 */6 * * * /usr/local/bin/ctw search recent --query "myapp" >> /var/log/twitter_mentions.json
 ```
 
-## Legacy Scripts
+**Pattern 4: Conditional Actions**
 
-The following curl-based scripts provide low-level API access for testing:
-
-### Stream Management
-
-**connect_to_stream.sh** - Connect to the filtered stream with curl
 ```bash
-./script/sh/connect_to_stream.sh
+# Take action based on content
+ctw search recent --query "urgent support" | jq -r '.data[].id' | while read -r id; do
+    ctw likes add --user-id YOUR_ID --tweet-id "$id"
+    # Notify support team
+done
 ```
-Direct API call to start streaming tweets. Requires active stream rules.
-
-**twitter_stream.sh** - Add stream rules via curl
-```bash
-./script/sh/twitter_stream.sh
-```
-Adds sample rules (edit the script to customize). For production, use `ctw stream rules add`.
-
-**validate_twitter_stream.sh** - List active stream rules
-```bash
-./script/sh/validate_twitter_stream.sh
-```
-Fetches and displays current rules with jq formatting.
-
-**delete_rule.sh** - Delete a stream rule by ID
-```bash
-./script/sh/delete_rule.sh RULE_ID
-```
-Removes a specific rule. Get rule IDs from `validate_twitter_stream.sh`.
-
-### User Management
-
-**block.sh** - Block/unblock users (OAuth 1.0a required)
-```bash
-./script/sh/block.sh USER_ID [block|unblock]
-```
-Note: Requires OAuth 1.0a signature. Use `ctw users block/unblock` instead.
-
-### Testing
-
-**test_env.sh** - Validate environment configuration
-```bash
-./script/sh/test_env.sh
-```
-Checks for BEARER_TOKEN, ctw binary, and required tools.
 
 ## Prerequisites
 
-All scripts require:
-- `BEARER_TOKEN` environment variable set
-- `ctw` binary built (for example scripts): `go build -o bin/ctw ./cmd/ctw`
-
 ```bash
-export BEARER_TOKEN="your_twitter_bearer_token_here"
+# Required
+export BEARER_TOKEN="your_twitter_bearer_token"
+
+# Optional but recommended
+export PATH="$PATH:/path/to/ctw/bin"
 ```
 
-## Usage
+Dependencies:
+- `ctw` binary (built or installed)
+- `jq` for JSON processing (recommended)
+- `curl` for low-level API scripts
 
-Make scripts executable:
-```bash
-chmod +x script/sh/examples/*.sh
-chmod +x script/sh/*.sh
-```
+Check with: `./script/sh/test_env.sh`
 
-Run any script:
-```bash
-./script/sh/examples/watch_golang.sh
-```
+## Documentation
 
-## See Also
-
-- [STREAMING.md](../../STREAMING.md) - Comprehensive streaming guide
-- [KEYWORD_SCREENING.md](../../KEYWORD_SCREENING.md) - Quick reference for keyword screening
+- **[AUTOMATION.md](../AUTOMATION.md)** - Comprehensive automation guide with real-world examples
+- **[STREAMING.md](../STREAMING.md)** - Twitter filtered stream API details  
+- **[KEYWORD_SCREENING.md](../KEYWORD_SCREENING.md)** - Keyword filtering syntax reference
+- **`ctw --help`** - Built-in CLI documentation

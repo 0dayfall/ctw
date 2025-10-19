@@ -1,7 +1,10 @@
 # Copilot Instructions for ctw
 
+## Project Overview
+**ctw** is a scriptable CLI for automating Twitter workflows using the Twitter v2 API. Built for integration with bash, cron, systemd, and Unix pipelines.
+
 ## Architecture & Scope
-- **Purpose**: Go 1.18 toolkit plus Cobra CLI for Twitter v2 endpoints. Runtime packages sit under `internal/`; the shipping binary lives in `cmd/ctw`.
+- **Purpose**: Go 1.18 automation toolkit with Cobra CLI. Single binary, JSON output, standard exit codes. Designed for scripting and automation, not interactive use.
 - **HTTP client**: `internal/client` exposes a configurable `Client` that handles base URL resolution, auth headers, rate-limit parsing, and JSON error decoding. Always prefer this over direct `http.Client` use.
 - **Shared DTOs**: `internal/data/json.go` carries common tweet entity structs. Keep endpoint-specific envelopes near their services (`internal/tweet/...`, `internal/users/...`).
 
@@ -37,6 +40,13 @@
 - Cobra adds indirect dependencies (`spf13/pflag`, `mousetrap`). Run `go test ./...` after dependency updates to ensure `go.sum` stays in sync.
 
 ## Developer Workflows
-- Export `BEARER_TOKEN` (and optional `USER_AGENT`) before running the CLI. Scripts under `script/sh` remain handy for quick curl smoke tests.
+- Export `BEARER_TOKEN` (and optional `USER_AGENT`) before running the CLI. Scripts under `script/sh` demonstrate automation patterns and provide testing utilities.
 - When adding endpoints, create a new service method that accepts a `context.Context`, builds query maps, decodes into typed structs, and returns rate-limit metadata.
 - Keep CLI commands thin: parse flags, build param maps, call the relevant service, print JSON, then log rate-limit info to stderr.
+
+## Automation Focus
+- **JSON output** - All commands output JSON to stdout for easy parsing with `jq`, making ctw perfect for pipelines
+- **Exit codes** - Follow Unix conventions: 0 for success, non-zero for errors
+- **Environment variables** - Primary configuration method (`BEARER_TOKEN`, `USER_AGENT`)
+- **Streaming** - Real-time processing via Twitter's filtered stream API with `ctw watch` for easy keyword monitoring
+- **Documentation** - AUTOMATION.md provides comprehensive automation examples; STREAMING.md covers filtered stream details
