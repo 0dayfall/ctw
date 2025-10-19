@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ctw
+Upstream-Contact: 0dayfall <maintainer@example.com>
+Source: https://github.com/0dayfall/ctw
+
+Files: *
+Copyright: 2025 0dayfall
+License: See LICENSE file

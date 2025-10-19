@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export GO111MODULE = on
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_build:
+	go build -o ctw ./cmd/ctw
+
+override_dh_auto_install:
+	install -D -m 0755 ctw debian/ctw/usr/bin/ctw
+
+override_dh_auto_test:
+	go test ./...

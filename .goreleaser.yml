@@ -1,0 +1,93 @@
+# GoReleaser configuration for ctw
+# Visit https://goreleaser.com for documentation
+
+version: 2
+
+project_name: ctw
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: ctw
+    main: ./cmd/ctw
+    binary: ctw
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+archives:
+  - id: ctw
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+      - INSTALL.md
+
+nfpms:
+  - id: ctw
+    package_name: ctw
+    homepage: https://github.com/0dayfall/ctw
+    maintainer: 0dayfall <maintainer@example.com>
+    description: Command-line toolkit for Twitter v2 API
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: README.md
+        dst: /usr/share/doc/ctw/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/ctw/LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - typo
+
+# Homebrew tap configuration  
+brews:
+  - repository:
+      owner: 0dayfall
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/0dayfall/ctw
+    description: Command-line toolkit for Twitter v2 API
+    license: MIT
+    install: |
+      bin.install "ctw"
+    test: |
+      system "#{bin}/ctw", "--version"

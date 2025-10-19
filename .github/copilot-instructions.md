@@ -14,18 +14,21 @@
 - **Filtered stream**: `internal/tweet/filteredstream` contains rule management and stream DTOs. Tests use `newTestService` helpers—mirror that for new methods.
 - **Recent search & counts**: `internal/tweet/recentsearch` and `internal/tweet/recentcount` expose `SearchRecent`/`GetRecentCount` methods that accept query param maps; reuse this pattern for additional pagination or expansions.
 - **Users domain**: `internal/users/lookup` now wraps lookup/block/follow endpoints in a single service. Legacy `block/` and `follow/` helpers are deprecated—avoid reviving them.
-- **Tweet publish**: `internal/tweet/publish` implements create/delete operations. Request structs (`CreateTweetRequest`) stay minimal—extend them cautiously when adding optional API fields.
+- **Tweet publish**: `internal/tweet/publish` implements create/delete operations. Request structs (`CreateTweetRequest`) stay minimal—extend them cautiously when adding optional API fields. Supports media attachments via `MediaIDs` array.
 - **Tweet lookup**: `internal/tweet/lookup` fetches single or multiple tweets by ID with support for expansions and field parameters.
 - **Timelines**: `internal/tweet/timelines` provides user tweets, mentions, and reverse chronological home timeline endpoints.
 - **Likes**: `internal/tweet/likes` handles like/unlike operations and listing liked tweets.
 - **Retweets**: `internal/tweet/retweets` supports retweet/unretweet actions and listing retweeters.
 - **Bookmarks**: `internal/tweet/bookmarks` manages bookmark add/remove/list operations.
 - **Direct messages**: `internal/dm` wraps DM send/list/delete flows. Follow the existing pattern (service + CLI) and surface rate-limit headers.
+- **Media upload**: `internal/media` implements chunked upload to `upload.twitter.com` (different base URL). Uses three-phase protocol: INIT (get media_id), APPEND (send 5MB chunks via multipart/form-data), FINALIZE (complete upload). Supports async video processing with polling loop (max 60 attempts, 5s intervals). Media categories: `tweet_image`, `tweet_video`, `tweet_gif`, `dm_image`, `dm_video`, `dm_gif`. Service struct holds `uploadBaseURL` field for testability.
 - **Sampled stream**: `internal/tweet/sampledstream` remains a stub; fix the malformed URL if you plan to ship sampled stream support.
 
 ## CLI Commands (`cmd/ctw`)
 - Root command wires `--bearer-token`, `--base-url`, and `--user-agent` flags into `client.Config`.
-- Subcommands: `stream`, `search recent`, `counts recent|all`, `users` (lookup, block, unblock, follow, unfollow), `tweets` (create, delete, get), `dms` (send, list, delete), `likes` (add, remove, list), `retweets` (add, remove, list), `bookmarks` (add, remove, list), and `timelines` (user, mentions, home).
+- Subcommands: `stream`, `search recent`, `counts recent|all`, `users` (lookup, block, unblock, follow, unfollow), `tweets` (create, delete, get), `dms` (send, list, delete), `likes` (add, remove, list), `retweets` (add, remove, list), `bookmarks` (add, remove, list), `timelines` (user, mentions, home), and `media upload`.
+- Tweet creation accepts `--media-ids` flag (comma-separated) to attach uploaded media. Validation allows text OR media (not both empty).
+- Media upload command accepts `--file` (required) and `--category` (optional) flags. Outputs `media_id_string` for use in tweets/DMs.
 - Helper utilities (`helpers.go`) contain `printJSON`, `printRateLimits`, and `parseKeyValuePairs`; reuse them instead of duplicating formatting logic.
 
 ## Testing & Tooling

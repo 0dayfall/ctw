@@ -1,6 +1,38 @@
 # ctw
 
-A Go 1.18 command-line toolkit for working with selected Twitter v2 REST endpoints.
+A Go 1.18 command-line toolkit for working with Twitter v2 REST endpoints, with powerful **real-time tweet streaming** and keyword monitoring.
+
+## ✨ Key Features
+
+- **🔴 Real-time Tweet Streaming** - Watch tweets matching keywords as they happen
+- **🔍 Filtered Stream** - Screen tweets for specific keywords, hashtags, users, or complex rules
+- **📊 Tweet Analytics** - Track timelines, likes, retweets, bookmarks
+- **📤 Publishing** - Create tweets, upload media, send DMs
+- **👥 User Management** - Lookup users, manage follows/blocks
+- **🔧 Flexible** - Configurable HTTP client with bearer-token auth and rate-limit tracking
+
+## Quick Start: Tweet Streaming
+
+Watch tweets for keywords in real-time:
+
+```bash
+# Set your Twitter API bearer token
+export BEARER_TOKEN="your_twitter_bearer_token"
+
+# Watch for keywords (auto-setup stream rules)
+ctw watch --keyword "golang" --auto-setup --show-user
+
+# Monitor multiple keywords
+ctw watch --keyword "bitcoin" --keyword "crypto" --auto-setup
+
+# Track your brand mentions
+ctw watch --keyword "@YourCompany" --keyword "YourProduct" --auto-setup
+```
+
+**📚 Documentation:**
+- [KEYWORD_SCREENING.md](KEYWORD_SCREENING.md) - Quick reference for keyword screening
+- [STREAMING.md](STREAMING.md) - Comprehensive streaming guide with examples
+- `script/sh/examples/` directory - Ready-to-use shell scripts
 
 ## Features
 
@@ -8,7 +40,40 @@ A Go 1.18 command-line toolkit for working with selected Twitter v2 REST endpoin
 - Service wrappers for tweets (timelines, likes, retweets, bookmarks, lookup, publish), users (lookup, relationships), direct messages, filtered stream, and search/counts.
 - Cobra-powered CLI in `cmd/ctw` with commands: `stream`, `search`, `counts`, `users`, `tweets`, `dms`, `likes`, `retweets`, `bookmarks`, and `timelines`.
 
-## Getting Started
+## Installation
+
+### macOS (Homebrew)
+
+```bash
+brew tap 0dayfall/tap
+brew install ctw
+```
+
+### Ubuntu/Debian (.deb package)
+
+Build and install the `.deb` package:
+
+```bash
+make deb
+sudo dpkg -i build/ctw_<version>_amd64.deb
+```
+
+### Using GoReleaser (All Platforms)
+
+GoReleaser builds for multiple platforms and handles releases automatically:
+
+```bash
+# Install GoReleaser
+brew install goreleaser/tap/goreleaser
+
+# Create a release (requires git tag)
+git tag -a v0.1.0 -m "Release v0.1.0"
+goreleaser release --clean
+```
+
+For detailed installation instructions including manual builds, see [INSTALL.md](INSTALL.md).
+
+### From Source
 
 1. **Install dependencies / tidy modules**
 
@@ -29,13 +94,45 @@ A Go 1.18 command-line toolkit for working with selected Twitter v2 REST endpoin
    ```bash
    go run ./cmd/ctw --help
    go build -o bin/ctw ./cmd/ctw
+   
+   # Or install to /usr/local/bin
+   make build
+   sudo make install
    ```
 
 ## CLI Examples
 
+### Real-Time Streaming
+
 ```bash
-# Stream with selected fields
+# Watch tweets for keywords (easiest method)
+ctw watch --keyword "AI" --keyword "machine learning" --auto-setup --show-user
+
+# Manual stream rule management
+ctw stream rules add --value "golang" --tag "go-lang"
+ctw stream rules add --value "bitcoin OR ethereum" --tag "crypto"
+ctw stream rules list
+ctw stream  # Start streaming
+
+# Advanced filtering
+ctw stream rules add --value "cats has:images lang:en -is:retweet"
+ctw watch --keyword "breaking news" --auto-setup
+
+# Delete rules
+ctw stream rules delete --id "rule_id_here"
+```
+
+### Tweets & Timelines
+
+```bash
+# Stream with selected fields (old method - use watch instead)
 ctw stream --field tweet.fields=created_at --field expansions=author_id
+
+# Search and analyze
+ctw search recent --query "golang" --param max_results=20
+
+# User timelines
+ctw timelines user --user-id 123 --param max_results=10
 
 # Add a filtered stream rule (dry run)
 ctw stream rules add --value "cats has:images" --tag "cats" --dry-run
@@ -84,6 +181,10 @@ ctw timelines home --user-id 123
 # Tweet lookup
 ctw tweets get --id 1234567890
 ctw tweets get --ids "123,456,789"
+
+# Media upload
+ctw media upload --file path/to/image.jpg --category tweet_image
+ctw tweets create --text "check this out" --media-ids "1234567890"
 ```
 
 ## Testing
@@ -102,9 +203,11 @@ No tests hit live Twitter endpoints. If you introduce integration tests, guard t
 cmd/ctw          # Cobra CLI entrypoint and commands
 internal/client  # Shared HTTP client abstraction
 internal/data    # Shared DTOs
-internal/tweet   # Tweet-related services
+internal/tweet   # Tweet-related services (lookup, publish, timelines, likes, retweets, bookmarks)
 internal/users   # User lookup & relationship services
-script/sh        # Legacy curl helpers (optional)
+internal/media   # Media upload service (chunked upload to upload.twitter.com)
+internal/dm      # Direct messages service
+script/sh        # Shell scripts for testing and examples
 ```
 
 ## Contributing
@@ -118,12 +221,6 @@ Command-line toolkit for exploring Twitter v2 REST endpoints. The project is wri
 
 - Go 1.18 or newer
 - Twitter API bearer token (`BEARER_TOKEN` environment variable)
-
-## Installation
-
-```bash
-go build -o bin/ctw ./cmd/ctw
-```
 
 ## Usage
 

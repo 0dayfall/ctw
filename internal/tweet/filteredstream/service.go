@@ -93,3 +93,29 @@ func (s *Service) GetRules(ctx context.Context) (RulesResponse, client.RateLimit
 
 	return payload, rateLimits, nil
 }
+
+// DeleteRule removes filtered stream rules by ID.
+func (s *Service) DeleteRule(ctx context.Context, cmd DeleteIdCommand, dryRun bool) (RulesResponse, client.RateLimitSnapshot, error) {
+	query := map[string]string{}
+	if dryRun {
+		query["dry_run"] = "true"
+	}
+
+	resp, err := s.client.Post(ctx, rulesPath, cmd, query)
+	if err != nil {
+		return RulesResponse{}, client.RateLimitSnapshot{}, err
+	}
+	defer client.SafeClose(resp.Body)
+
+	rateLimits := client.ParseRateLimits(resp)
+	if err := client.CheckResponse(resp); err != nil {
+		return RulesResponse{}, rateLimits, err
+	}
+
+	var payload RulesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return RulesResponse{}, rateLimits, fmt.Errorf("filteredstream: decode delete rule response: %w", err)
+	}
+
+	return payload, rateLimits, nil
+}

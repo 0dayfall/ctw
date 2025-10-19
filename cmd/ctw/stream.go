@@ -62,6 +62,7 @@ func newStreamRulesCommand() *cobra.Command {
 
 	rulesCmd.AddCommand(newStreamRulesAddCommand())
 	rulesCmd.AddCommand(newStreamRulesListCommand())
+	rulesCmd.AddCommand(newStreamRulesDeleteCommand())
 
 	return rulesCmd
 }
@@ -145,6 +146,52 @@ func newStreamRulesListCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func newStreamRulesDeleteCommand() *cobra.Command {
+	var (
+		ids []string
+		dry bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete filtered stream rules by ID",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(ids) == 0 {
+				return errors.New("at least one rule ID is required")
+			}
+
+			ctx := cmd.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+
+			c, err := newClientFromFlags()
+			if err != nil {
+				return err
+			}
+
+			service := stream.NewService(c)
+			payload := stream.CreateDeleteIdCommand(ids)
+
+			response, rateLimits, err := service.DeleteRule(ctx, payload, dry)
+			if err != nil {
+				return err
+			}
+
+			if err := printJSON(response); err != nil {
+				return err
+			}
+			printRateLimits(rateLimits)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringArrayVar(&ids, "id", nil, "Rule ID to delete (can be specified multiple times)")
+	cmd.Flags().BoolVar(&dry, "dry-run", false, "Send the request as a dry run to validate")
 
 	return cmd
 }

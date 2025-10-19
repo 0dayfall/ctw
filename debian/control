@@ -1,0 +1,24 @@
+Source: ctw
+Section: utils
+Priority: optional
+Maintainer: 0dayfall <maintainer@example.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 1.18)
+Standards-Version: 4.6.0
+Homepage: https://github.com/0dayfall/ctw
+Vcs-Browser: https://github.com/0dayfall/ctw
+Vcs-Git: https://github.com/0dayfall/ctw.git
+
+Package: ctw
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Command-line toolkit for Twitter v2 API
+ A Go-based CLI tool for working with Twitter v2 REST endpoints.
+ .
+ Features include:
+  * Filtered stream and search capabilities
+  * User lookup and relationship management
+  * Tweet operations (create, delete, lookup)
+  * Media upload with chunked transfer
+  * Direct messages
+  * Likes, retweets, and bookmarks
+  * Timeline access
