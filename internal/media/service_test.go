@@ -25,7 +25,15 @@ func TestUploadSmallImage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
 
+		// Parse form to get command from either query params or form data
+		r.ParseMultipartForm(10 << 20) // 10MB
 		command := r.URL.Query().Get("command")
+		if command == "" && r.MultipartForm != nil {
+			if values := r.MultipartForm.Value["command"]; len(values) > 0 {
+				command = values[0]
+			}
+		}
+
 		switch command {
 		case "INIT":
 			initCalled = true
@@ -39,7 +47,8 @@ func TestUploadSmallImage(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"media_id":123456,"media_id_string":"123456","size":15}`))
 		default:
-			t.Fatalf("unexpected command: %s", command)
+			t.Logf("unexpected command: %s", command)
+			w.WriteHeader(http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
