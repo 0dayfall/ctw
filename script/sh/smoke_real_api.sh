@@ -57,19 +57,39 @@ CTW_BIN="$(resolve_ctw_bin)" || {
 temp_dir="$(mktemp -d)"
 cleanup_paths+=("$temp_dir")
 
+run_ctw_to_file() {
+  local out_file="$1"
+  shift
+  local err_file="$temp_dir/ctw_err.log"
+
+  set +e
+  "$CTW_BIN" "$@" > "$out_file" 2> "$err_file"
+  local status=$?
+  set -e
+
+  if [[ $status -ne 0 ]]; then
+    if grep -q "status 429" "$err_file"; then
+      echo "Rate limited (429); skipping smoke tests."
+      exit 0
+    fi
+    cat "$err_file" >&2
+    return "$status"
+  fi
+}
+
 echo "Running ctw smoke tests with $CTW_BIN"
 
 echo "-> users lookup"
-"$CTW_BIN" users lookup --usernames "twitter" > "$temp_dir/users.json"
+run_ctw_to_file "$temp_dir/users.json" users lookup --usernames "twitter"
 
 echo "-> search recent"
-"$CTW_BIN" search recent --query "golang" --param "max_results=10" > "$temp_dir/search.json"
+run_ctw_to_file "$temp_dir/search.json" search recent --query "golang" --param "max_results=10"
 
 if command -v jq >/dev/null 2>&1; then
   user_id="$(jq -r 'if type=="array" then (.[0].id // empty) else (.data[0].id // empty) end' "$temp_dir/users.json")"
   if [[ -n "$user_id" ]]; then
     echo "-> timelines user"
-    "$CTW_BIN" timelines user --user-id "$user_id" --param "max_results=10" > "$temp_dir/timeline.json"
+    run_ctw_to_file "$temp_dir/timeline.json" timelines user --user-id "$user_id" --param "max_results=10"
   else
     echo "No user id found in users lookup; skipping timelines test."
   fi
