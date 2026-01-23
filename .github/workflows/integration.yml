@@ -1,0 +1,18 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install jq for integration tests
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Run integration tests
+        run: go test ./cmd/ctw -count=1
