@@ -16,3 +16,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Run integration tests
         run: go test ./cmd/ctw -count=1
+      - name: Smoke test (optional)
+        env:
+          BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
+        run: |
+          if [ -n "${BEARER_TOKEN}" ]; then
+            ./script/sh/smoke_real_api.sh
+          else
+            echo "BEARER_TOKEN not set; skipping smoke test."
+          fi
