@@ -77,8 +77,7 @@ changelog:
       - typo
 
 release:
-  github:
-    replace_existing_artifacts: true
+  replace_existing_artifacts: true
 
 # Homebrew tap configuration  
 brews:
@@ -86,9 +85,7 @@ brews:
       owner: 0dayfall
       name: homebrew-tap
       branch: main
-    git:
-      url: "git@github.com:0dayfall/homebrew-tap.git"
-      private_key: "{{ .Env.HOMEBREW_TAP_SSH_KEY }}"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: https://github.com/0dayfall/ctw
     description: Command-line toolkit for Twitter v2 API
