@@ -155,46 +155,18 @@ goreleaser release --clean
 
 ## CI/CD Integration (Optional)
 
-You can automate this with GitHub Actions. Create `.github/workflows/release.yml`:
+This repo includes GitHub Actions workflows:
 
-```yaml
-name: Release
+- `CI` runs `go test ./...` on pushes and pull requests.
+- `Release` runs tests on tags and then runs GoReleaser. It also runs the optional smoke test if a `BEARER_TOKEN` secret is configured.
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
-
-jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '1.18'
-      
-      - uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-```
-
-Then add `HOMEBREW_TAP_GITHUB_TOKEN` to your repository secrets:
+Add `HOMEBREW_TAP_GITHUB_TOKEN` to your repository secrets:
 1. Go to repository Settings → Secrets and variables → Actions
 2. Click "New repository secret"
 3. Name: `HOMEBREW_TAP_GITHUB_TOKEN`
 4. Value: Your personal access token
+
+Optional: add `BEARER_TOKEN` to enable the real API smoke test in release workflows.
 
 Now just push a tag and GitHub Actions will handle the release automatically!
 

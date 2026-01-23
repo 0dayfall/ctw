@@ -42,6 +42,16 @@ goreleaser release --snapshot --clean --skip=publish
 ls -la dist/
 ```
 
+### 3b. Run Real API Smoke Test (Optional but Recommended)
+
+```bash
+# Requires a valid BEARER_TOKEN
+export BEARER_TOKEN="your_twitter_bearer_token"
+./script/sh/smoke_real_api.sh
+```
+
+In CI, store the token as a repository secret named `BEARER_TOKEN` and map it to the job environment.
+
 ### 4. Create Your First Release
 
 ```bash
@@ -119,44 +129,14 @@ goreleaser release --snapshot --clean --skip=publish
 
 ## CI/CD Automation (Optional)
 
-Want GitHub Actions to automatically release when you push a tag?
+This repo includes GitHub Actions workflows:
 
-Create `.github/workflows/release.yml`:
+- `CI` runs `go test ./...` on pushes and pull requests.
+- `Release` runs tests on tags and then runs GoReleaser. It also runs the optional smoke test if a `BEARER_TOKEN` secret is configured.
 
-```yaml
-name: Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
-
-jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.18'
-      
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-```
-
-Then add `HOMEBREW_TAP_GITHUB_TOKEN` as a repository secret in GitHub.
+Secrets to add in GitHub:
+- `HOMEBREW_TAP_GITHUB_TOKEN` (required for Homebrew tap publishing)
+- `BEARER_TOKEN` (optional, enables real API smoke tests during release)
 
 ## Ready to Test?
 

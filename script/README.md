@@ -55,6 +55,9 @@ Validates your setup: checks `BEARER_TOKEN`, finds `ctw` binary, verifies depend
 **validate_twitter_stream.sh**  
 Tests API connectivity and lists active stream rules.
 
+**smoke_real_api.sh**  
+Opt-in smoke test for real API calls (requires `BEARER_TOKEN`). Intended for release checks.
+
 **connect_to_stream.sh**, **twitter_stream.sh**, **delete_rule.sh**, **block.sh**  
 Low-level curl examples showing raw API usage. For production, use the `ctw` CLI instead.
 

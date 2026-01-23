@@ -194,7 +194,6 @@ func (c *Client) decorateHeaders(req *http.Request) {
 	if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("Accept-Encoding", "gzip")
 	if token := strings.TrimSpace(c.bearerToken); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}

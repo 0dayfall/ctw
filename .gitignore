@@ -20,3 +20,7 @@
 
 # GoReleaser dist directory
 dist/
+
+# Local secrets
+tokens.toml
+ctw.toml
