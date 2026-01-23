@@ -6,22 +6,52 @@ if [[ -z "${BEARER_TOKEN:-}" ]]; then
   exit 0
 fi
 
-CTW_BIN="${CTW_BIN:-}"
-if [[ -z "$CTW_BIN" ]]; then
-  if command -v ctw >/dev/null 2>&1; then
-    CTW_BIN="$(command -v ctw)"
-  elif [[ -x "./bin/ctw" ]]; then
-    CTW_BIN="./bin/ctw"
-  elif [[ -x "./ctw" ]]; then
-    CTW_BIN="./ctw"
-  else
-    echo "ctw binary not found (set CTW_BIN or add to PATH)." >&2
-    exit 1
+cleanup_paths=()
+trap 'rm -rf "${cleanup_paths[@]}"' EXIT
+
+resolve_ctw_bin() {
+  local candidates=()
+  local candidate=""
+
+  if [[ -n "${CTW_BIN:-}" ]]; then
+    candidates+=("$CTW_BIN")
   fi
-fi
+  if command -v ctw >/dev/null 2>&1; then
+    candidates+=("$(command -v ctw)")
+  fi
+  if [[ -x "./bin/ctw" ]]; then
+    candidates+=("./bin/ctw")
+  fi
+  if [[ -x "./ctw" ]]; then
+    candidates+=("./ctw")
+  fi
+
+  for candidate in "${candidates[@]}"; do
+    if "$candidate" --version >/dev/null 2>&1; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  if command -v go >/dev/null 2>&1; then
+    local build_dir
+    build_dir="$(mktemp -d)"
+    cleanup_paths+=("$build_dir")
+    go build -o "$build_dir/ctw" ./cmd/ctw
+    echo "$build_dir/ctw"
+    return 0
+  fi
+
+  return 1
+}
+
+CTW_BIN="$(resolve_ctw_bin)" || {
+  echo "ctw binary not found or not runnable; install Go or set CTW_BIN." >&2
+  exit 1
+}
 
 temp_dir="$(mktemp -d)"
-trap 'rm -rf "$temp_dir"' EXIT
+cleanup_paths+=("$temp_dir")
 
 echo "Running ctw smoke tests with $CTW_BIN"
 
