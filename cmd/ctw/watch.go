@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,10 +22,11 @@ func init() {
 
 func newWatchCommand() *cobra.Command {
 	var (
-		keywords  []string
-		autoSetup bool
-		showUser  bool
-		showMeta  bool
+		keywords   []string
+		autoSetup  bool
+		showUser   bool
+		showMeta   bool
+		jsonOutput bool
 	)
 
 	cmd := &cobra.Command{
@@ -122,51 +125,151 @@ Examples:
 
 			tweetCount := 0
 			startTime := time.Now()
+			reconnects := 0
+			lastDisconnect := "none"
+			lastRuleSet := "existing rules"
+			if autoSetup {
+				lastRuleSet = strings.Join(keywords, ", ")
+			}
 
-			// Stream tweets
-			err = service.StreamReader(ctx, fields, func(tweet stream.StreamTweet, includes stream.StreamIncludes) error {
-				tweetCount++
+			backoff := 2 * time.Second
+			maxBackoff := resolvedSettings.StreamBackoffMax
+			if maxBackoff <= 0 {
+				maxBackoff = 2 * time.Minute
+			}
 
-				// Display tweet
-				fmt.Printf("\n─────────────────────────────────────────\n")
-				fmt.Printf("🐦 Tweet #%d\n", tweetCount)
-				fmt.Printf("ID: %s\n", tweet.ID)
-				fmt.Printf("Time: %s\n", tweet.CreatedAt.Format(time.RFC3339))
+			// Stream tweets with reconnect + backoff
+			for {
+				err = service.StreamReader(ctx, fields, func(tweet stream.StreamTweet, includes stream.StreamIncludes) error {
+					tweetCount++
 
-				if showUser && len(includes.Users) > 0 {
-					user := includes.Users[0]
-					fmt.Printf("Author: @%s (%s)\n", user.Username, user.Name)
+					if jsonOutput {
+						if cmd.Flags().Changed("pretty") {
+							type prettyTweet struct {
+								ID                string    `json:"id"`
+								Text              string    `json:"text"`
+								AuthorID          string    `json:"author_id,omitempty"`
+								AuthorUsername    string    `json:"author_username,omitempty"`
+								AuthorName        string    `json:"author_name,omitempty"`
+								CreatedAt         time.Time `json:"created_at,omitempty"`
+								Lang              string    `json:"lang,omitempty"`
+								Source            string    `json:"source,omitempty"`
+								PossiblySensitive bool      `json:"possibly_sensitive,omitempty"`
+							}
+							out := prettyTweet{
+								ID:                tweet.ID,
+								Text:              tweet.Text,
+								AuthorID:          tweet.AuthorID,
+								CreatedAt:         tweet.CreatedAt,
+								Lang:              tweet.Lang,
+								Source:            tweet.Source,
+								PossiblySensitive: tweet.PossiblySensitive,
+							}
+							if showUser && len(includes.Users) > 0 {
+								out.AuthorUsername = includes.Users[0].Username
+								out.AuthorName = includes.Users[0].Name
+							}
+							payload, err := json.MarshalIndent(out, "", "  ")
+							if err != nil {
+								return err
+							}
+							fmt.Println(string(payload))
+							return nil
+						}
+
+						type rawEvent struct {
+							Data     stream.StreamTweet    `json:"data"`
+							Includes stream.StreamIncludes `json:"includes,omitempty"`
+						}
+						payload, err := json.Marshal(rawEvent{Data: tweet, Includes: includes})
+						if err != nil {
+							return err
+						}
+						fmt.Println(string(payload))
+						return nil
+					}
+
+					// Display tweet (human output)
+					fmt.Printf("\n─────────────────────────────────────────\n")
+					fmt.Printf("🐦 Tweet #%d\n", tweetCount)
+					fmt.Printf("ID: %s\n", tweet.ID)
+					fmt.Printf("Time: %s\n", tweet.CreatedAt.Format(time.RFC3339))
+
+					if showUser && len(includes.Users) > 0 {
+						user := includes.Users[0]
+						fmt.Printf("Author: @%s (%s)\n", user.Username, user.Name)
+					} else {
+						fmt.Printf("Author ID: %s\n", tweet.AuthorID)
+					}
+
+					fmt.Printf("Language: %s\n", tweet.Lang)
+					if tweet.PossiblySensitive {
+						fmt.Printf("⚠️  Possibly Sensitive\n")
+					}
+
+					fmt.Printf("\nText:\n%s\n", tweet.Text)
+
+					if showMeta {
+						fmt.Printf("\nMetadata:\n")
+						fmt.Printf("  Source: %s\n", tweet.Source)
+					}
+
+					return nil
+				})
+
+				if err == nil {
+					lastDisconnect = "EOF"
+				} else if errors.Is(err, io.EOF) {
+					lastDisconnect = "EOF"
+				} else if errors.Is(err, context.Canceled) {
+					break
 				} else {
-					fmt.Printf("Author ID: %s\n", tweet.AuthorID)
+					lastDisconnect = err.Error()
 				}
 
-				fmt.Printf("Language: %s\n", tweet.Lang)
-				if tweet.PossiblySensitive {
-					fmt.Printf("⚠️  Possibly Sensitive\n")
+				if err != nil && errors.Is(err, context.Canceled) {
+					break
 				}
 
-				fmt.Printf("\nText:\n%s\n", tweet.Text)
-
-				if showMeta {
-					fmt.Printf("\nMetadata:\n")
-					fmt.Printf("  Source: %s\n", tweet.Source)
+				if ctx.Err() != nil {
+					break
 				}
 
-				return nil
-			})
+				fmt.Fprintf(os.Stderr, "disconnected: %s\n", lastDisconnect)
+				reconnects++
 
-			if err != nil && err != context.Canceled {
-				return fmt.Errorf("stream error: %w", err)
+				wait := backoff
+				if wait > maxBackoff {
+					wait = maxBackoff
+				}
+				fmt.Fprintf(os.Stderr, "reconnecting in %s...\n", wait.Round(time.Second))
+
+				timer := time.NewTimer(wait)
+				select {
+				case <-ctx.Done():
+					timer.Stop()
+					break
+				case <-timer.C:
+				}
+				if ctx.Err() != nil {
+					break
+				}
+
+				if backoff < maxBackoff {
+					backoff *= 2
+					if backoff > maxBackoff {
+						backoff = maxBackoff
+					}
+				}
 			}
 
 			// Show summary
 			duration := time.Since(startTime)
-			fmt.Fprintf(os.Stderr, "\n\n📊 Summary:\n")
-			fmt.Fprintf(os.Stderr, "   Tweets received: %d\n", tweetCount)
-			fmt.Fprintf(os.Stderr, "   Duration: %s\n", duration.Round(time.Second))
+			fmt.Fprintf(os.Stderr, "\n\nStream summary: %s, %d tweets, reconnects=%d, last_disconnect=%s, last_ruleset=%s\n",
+				duration.Round(time.Second), tweetCount, reconnects, lastDisconnect, lastRuleSet)
 			if duration.Seconds() > 0 {
 				rate := float64(tweetCount) / duration.Seconds() * 60
-				fmt.Fprintf(os.Stderr, "   Rate: %.1f tweets/minute\n", rate)
+				fmt.Fprintf(os.Stderr, "Rate: %.1f tweets/minute\n", rate)
 			}
 
 			return nil
@@ -177,6 +280,7 @@ Examples:
 	cmd.Flags().BoolVar(&autoSetup, "auto-setup", false, "Automatically set up stream rules for keywords")
 	cmd.Flags().BoolVar(&showUser, "show-user", false, "Show author information")
 	cmd.Flags().BoolVar(&showMeta, "show-meta", false, "Show additional metadata")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output newline-delimited JSON events")
 
 	return cmd
 }
