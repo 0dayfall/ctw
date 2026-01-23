@@ -66,7 +66,7 @@ echo "-> search recent"
 "$CTW_BIN" search recent --query "golang" --param "max_results=10" > "$temp_dir/search.json"
 
 if command -v jq >/dev/null 2>&1; then
-  user_id="$(jq -r '.data[0].id // empty' "$temp_dir/users.json")"
+  user_id="$(jq -r 'if type=="array" then (.[0].id // empty) else (.data[0].id // empty) end' "$temp_dir/users.json")"
   if [[ -n "$user_id" ]]; then
     echo "-> timelines user"
     "$CTW_BIN" timelines user --user-id "$user_id" --param "max_results=10" > "$temp_dir/timeline.json"
