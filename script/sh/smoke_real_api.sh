@@ -27,7 +27,11 @@ resolve_ctw_bin() {
   fi
 
   for candidate in "${candidates[@]}"; do
-    if "$candidate" --version >/dev/null 2>&1; then
+    set +e
+    "$candidate" --version >/dev/null 2>&1
+    status=$?
+    set -e
+    if [[ $status -eq 0 ]]; then
       echo "$candidate"
       return 0
     fi
