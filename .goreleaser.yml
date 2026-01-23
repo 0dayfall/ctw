@@ -76,6 +76,10 @@ changelog:
       - '^chore:'
       - typo
 
+release:
+  github:
+    replace_existing_artifacts: true
+
 # Homebrew tap configuration  
 brews:
   - repository:
