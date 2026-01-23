@@ -3,6 +3,7 @@ module github.com/0dayfall/ctw
 go 1.18
 
 require (
+	github.com/BurntSushi/toml v1.3.2
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.8.2
 )

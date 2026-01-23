@@ -11,7 +11,16 @@ import (
 )
 
 func printJSON(v interface{}) error {
-	data, err := json.MarshalIndent(v, "", "  ")
+	var (
+		data []byte
+		err  error
+	)
+
+	if prettyOutput {
+		data, err = json.MarshalIndent(v, "", "  ")
+	} else {
+		data, err = json.Marshal(v)
+	}
 	if err != nil {
 		return err
 	}

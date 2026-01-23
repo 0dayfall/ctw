@@ -24,12 +24,19 @@ var rootCmd = &cobra.Command{
 	Short:   "Twitter v2 command line client",
 	Long:    "ctw is a command line interface for interacting with selected Twitter v2 API endpoints.",
 	Version: Version,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return ensureSettings(cmd)
+	},
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&bearerTokenFlag, "bearer-token", "", "Twitter API bearer token (defaults to BEARER_TOKEN)")
 	rootCmd.PersistentFlags().StringVar(&baseURLFlag, "base-url", "", "Override API base URL (defaults to https://api.twitter.com/)")
 	rootCmd.PersistentFlags().StringVar(&userAgentFlag, "user-agent", "", "Override HTTP User-Agent header")
+	rootCmd.PersistentFlags().StringVar(&configPathFlag, "config", "", "Path to config file (defaults to ~/.config/ctw/config.toml)")
+	rootCmd.PersistentFlags().DurationVar(&timeoutFlag, "timeout", 0, "HTTP timeout (e.g. 15s)")
+	rootCmd.PersistentFlags().IntVar(&retryFlag, "retry", 0, "HTTP retry attempts for transient failures")
+	rootCmd.PersistentFlags().BoolVar(&prettyFlag, "pretty", false, "Pretty-print JSON output")
 
 	// Set custom version output
 	rootCmd.SetVersionTemplate(fmt.Sprintf("ctw version %s\nCommit: %s\nBuilt:  %s\n", Version, Commit, Date))
@@ -43,10 +50,15 @@ func Execute() {
 }
 
 func newClientFromFlags() (*client.Client, error) {
+	if err := ensureSettings(rootCmd); err != nil {
+		return nil, err
+	}
+
 	cfg := client.Config{
-		BaseURL:     baseURLFlag,
-		BearerToken: bearerTokenFlag,
-		UserAgent:   userAgentFlag,
+		BaseURL:     resolvedSettings.BaseURL,
+		BearerToken: resolvedSettings.BearerToken,
+		UserAgent:   resolvedSettings.UserAgent,
+		Timeout:     resolvedSettings.Timeout,
 	}
 	return client.New(cfg)
 }
