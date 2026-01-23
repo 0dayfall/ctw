@@ -39,6 +39,8 @@ ctw watch --keyword "@YourBrand" --auto-setup | grep "urgent"
 ctw watch --keyword "@YourBrand" --auto-setup --json > brand_mentions.jsonl
 ```
 
+More copy-paste examples live in `script/recipes/`.
+
 ### 📊 Collect Social Data
 ```bash
 # Gather tweets for analysis

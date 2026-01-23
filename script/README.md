@@ -12,6 +12,7 @@ These scripts show you how to:
 
 ## Structure
 
+- **recipes/** - Short, copy-pasteable recipes for common workflows
 - **sh/examples/** - Production-ready automation scripts
 - **sh/** - Testing utilities and low-level API examples
 

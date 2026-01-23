@@ -60,6 +60,8 @@ ctw watch --keyword "@YourBrand" --auto-setup | while read -r line; do
 done
 ```
 
+More copy-paste recipes are available in `script/recipes/`.
+
 ### Pattern 2: Scheduled Data Collection
 
 Use cron for periodic data gathering:
