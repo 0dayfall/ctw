@@ -102,12 +102,24 @@ sudo make install INSTALL_PREFIX=/opt/ctw
 After installation, configure your Twitter API credentials:
 
 ```bash
+ctw init
+```
+
+This verifies access and writes a config file at:
+- macOS/Linux: `~/.config/ctw/config.toml`
+- Windows: `%APPDATA%\\ctw\\config.toml`
+
+You can also configure via environment variables:
+
+```bash
 export BEARER_TOKEN="<your twitter bearer token>"
 # Optional:
 export USER_AGENT="my-client/1.0"
 ```
 
 Consider adding these to your `~/.bashrc` or `~/.zshrc` for persistence.
+
+See `config.example.toml` for a ready-to-copy template.
 
 ## Verify Installation
 

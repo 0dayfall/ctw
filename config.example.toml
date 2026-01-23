@@ -1,0 +1,13 @@
+[auth]
+bearer_token = "env:BEARER_TOKEN"
+
+[http]
+user_agent = "ctw/0.2"
+timeout = "15s"
+retry = 3
+
+[output]
+pretty = false
+
+[stream]
+backoff_max = "2m"

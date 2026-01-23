@@ -6,12 +6,12 @@ Perfect for building bots, monitoring social media, aggregating content, or inte
 
 ## Why ctw?
 
-- **🤖 Built for Automation** - JSON output, exit codes, environment variables - integrates seamlessly with bash, cron, systemd
-- **� Complete API Coverage** - Tweets, DMs, users, media upload, streaming, likes, retweets, bookmarks, timelines
-- **⚡ Single Binary** - No runtime dependencies, just download and run
-- **� Script-Friendly** - Pipeable output, works with `jq`, `grep`, `awk` and other Unix tools
-- **� Real-Time Processing** - Monitor tweets as they happen using Twitter's filtered stream API
-- **🚀 Production-Ready** - Rate-limit handling, error reporting, comprehensive logging
+- **Built for Automation** - JSON output, exit codes, environment variables - integrates seamlessly with bash, cron, systemd
+- **Complete API Coverage** - Tweets, DMs, users, media upload, streaming, likes, retweets, bookmarks, timelines
+- **Single Binary** - No runtime dependencies, just download and run
+- **Script-Friendly** - Pipeable output, works with `jq`, `grep`, `awk` and other Unix tools
+- **Real-Time Processing** - Monitor tweets as they happen using Twitter's filtered stream API
+- **Production-Ready** - Rate-limit handling, error reporting, comprehensive logging
 
 ## Quick Start
 
@@ -23,6 +23,7 @@ brew tap 0dayfall/tap && brew install ctw
 export BEARER_TOKEN="your_twitter_bearer_token"
 
 # Start automating
+ctw init
 ctw search recent --query "golang" | jq -r '.data[].text'
 ctw users lookup --usernames "github,golang"
 ctw tweets create --text "Hello from automation!"
@@ -30,7 +31,7 @@ ctw tweets create --text "Hello from automation!"
 
 ## Common Use Cases
 
-### 🔍 Monitor Brand Mentions
+### Monitor Brand Mentions
 ```bash
 # Real-time monitoring with keyword filtering
 ctw watch --keyword "@YourBrand" --auto-setup | grep "urgent"
@@ -41,14 +42,14 @@ ctw watch --keyword "@YourBrand" --auto-setup --json > brand_mentions.jsonl
 
 More copy-paste examples live in `script/recipes/`.
 
-### 📊 Collect Social Data
+### Collect Social Data
 ```bash
 # Gather tweets for analysis
 ctw search recent --query "climate change" --param "max_results=100" \
     | jq -r '.data[] | [.created_at, .text] | @csv' > data.csv
 ```
 
-### 🤖 Build a Twitter Bot
+### Build a Twitter Bot
 ```bash
 # Automated content curation
 ctw search recent --query "golang tutorial" --param "max_results=10" \
@@ -56,14 +57,14 @@ ctw search recent --query "golang tutorial" --param "max_results=10" \
     | xargs -I {} ctw retweets add --user-id YOUR_ID --tweet-id {}
 ```
 
-### 📤 Schedule Posts
+### Schedule Posts
 ```bash
 # Publish with media (cron job)
 MEDIA_ID=$(ctw media upload --file chart.png | jq -r '.media_id_string')
 ctw tweets create --text "Daily update" --media-ids "$MEDIA_ID"
 ```
 
-### 🔔 Get Alerts
+### Get Alerts
 ```bash
 # Stream to Slack/Discord webhook
 ctw watch --keyword "BREAKING" --auto-setup \
@@ -137,6 +138,46 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions and [GORELEA
 
 ## Configuration
 
+### Quick Setup (Recommended)
+
+```bash
+ctw init
+```
+
+This verifies your credentials and writes a config file with an env reference.
+
+### Config File (TOML)
+
+Default locations:
+- macOS/Linux: `~/.config/ctw/config.toml`
+- Windows: `%APPDATA%\\ctw\\config.toml`
+
+Example:
+
+```toml
+[auth]
+bearer_token = "env:BEARER_TOKEN"
+
+[http]
+user_agent = "ctw/0.2"
+timeout = "15s"
+retry = 3
+
+[output]
+pretty = false
+
+[stream]
+backoff_max = "2m"
+```
+
+See `config.example.toml` for a ready-to-copy template.
+
+### Precedence
+
+Flags > Env vars > Config file > Defaults
+
+### Environment Variables
+
 ```bash
 # Required: Twitter API bearer token
 export BEARER_TOKEN="your_twitter_bearer_token_here"
@@ -144,11 +185,14 @@ export BEARER_TOKEN="your_twitter_bearer_token_here"
 # Optional: custom user agent
 export USER_AGENT="my-bot/1.0"
 
-# Or pass via flags
-ctw --bearer-token "xxx" search recent --query "test"
+# Optional: config overrides
+export CTW_TIMEOUT="15s"
+export CTW_RETRY="3"
+export CTW_PRETTY="false"
+export CTW_STREAM_BACKOFF_MAX="2m"
 ```
 
-Get your bearer token from [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard).
+Get your bearer token from the Twitter Developer Portal.
 
 ## Automation Examples
 
@@ -322,6 +366,11 @@ make deb          # Creates .deb package
 - Keep CLI commands thin - parse flags, call service, print JSON
 - Add tests using `httptest.Server` helpers
 - Update documentation when adding features
+
+**Issues & Contributions:**
+
+- Report bugs or request features via GitHub Issues
+- PRs welcome -- small, focused changes are easiest to review
 
 ## API Rate Limits
 
