@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.2). Required when running manually."
+        required: false
 
 permissions:
   contents: write
@@ -25,9 +29,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
+      - name: Resolve release ref
+        id: release_ref
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "ref=refs/tags/${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "No tag provided for manual run. Re-run with a tag (e.g. v0.1.2)." >&2
+          exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.release_ref.outputs.ref }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
