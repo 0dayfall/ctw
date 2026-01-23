@@ -86,7 +86,9 @@ brews:
       owner: 0dayfall
       name: homebrew-tap
       branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    git:
+      url: "git@github.com:0dayfall/homebrew-tap.git"
+      private_key: "{{ .Env.HOMEBREW_TAP_SSH_KEY }}"
     directory: Formula
     homepage: https://github.com/0dayfall/ctw
     description: Command-line toolkit for Twitter v2 API
