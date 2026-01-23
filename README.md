@@ -34,6 +34,9 @@ ctw tweets create --text "Hello from automation!"
 ```bash
 # Real-time monitoring with keyword filtering
 ctw watch --keyword "@YourBrand" --auto-setup | grep "urgent"
+
+# JSON lines output for automation
+ctw watch --keyword "@YourBrand" --auto-setup --json > brand_mentions.jsonl
 ```
 
 ### 📊 Collect Social Data

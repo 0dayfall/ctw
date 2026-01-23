@@ -21,6 +21,9 @@ ctw watch --keyword "AI" --auto-setup --show-user --show-meta
 
 Press `Ctrl+C` to stop watching.
 
+When the stream stops, ctw prints a summary with runtime, tweet count, reconnects,
+and the last disconnect reason so you can quickly see stream health.
+
 ### Option 2: Manual Rule Management
 
 For more control, manually manage stream rules:
@@ -184,6 +187,20 @@ Check out this awesome #golang tutorial! 🚀
 https://example.com/tutorial
 ```
 
+### JSON Lines (Watch Command)
+
+Use JSON output for automation pipelines:
+
+```bash
+ctw watch --keyword "golang" --auto-setup --json > watch.jsonl
+```
+
+For a compact, pretty JSON event:
+
+```bash
+ctw watch --keyword "golang" --auto-setup --json --pretty
+```
+
 ## Best Practices
 
 ### 1. Rule Limits
@@ -222,6 +239,9 @@ watch -n 60 'ctw stream rules list'
 
 # Track tweet volume
 ctw watch --keyword "trending" --auto-setup | grep "Tweet #" | wc -l
+
+# Check reconnection behavior with summary output
+ctw watch --keyword "the" --auto-setup
 ```
 
 ## Troubleshooting
