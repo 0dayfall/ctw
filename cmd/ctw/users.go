@@ -67,6 +67,7 @@ func newUsersLookupCommand() *cobra.Command {
 			case len(ids) > 0:
 				response, rateLimits, err := service.LookupIDs(ctx, ids, params)
 				if err != nil {
+					printRateLimits(rateLimits)
 					return err
 				}
 				if err := printJSON(response); err != nil {
@@ -77,6 +78,7 @@ func newUsersLookupCommand() *cobra.Command {
 			case len(usernames) > 0:
 				response, rateLimits, err := service.LookupUsernames(ctx, usernames, params)
 				if err != nil {
+					printRateLimits(rateLimits)
 					return err
 				}
 				if err := printJSON(response); err != nil {
@@ -87,6 +89,7 @@ func newUsersLookupCommand() *cobra.Command {
 			case id != "":
 				response, rateLimits, err := service.LookupID(ctx, id, params)
 				if err != nil {
+					printRateLimits(rateLimits)
 					return err
 				}
 				if err := printJSON(response); err != nil {
@@ -97,6 +100,7 @@ func newUsersLookupCommand() *cobra.Command {
 			case username != "":
 				response, rateLimits, err := service.LookupUsername(ctx, username, params)
 				if err != nil {
+					printRateLimits(rateLimits)
 					return err
 				}
 				if err := printJSON(response); err != nil {

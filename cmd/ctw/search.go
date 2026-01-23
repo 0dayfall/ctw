@@ -65,6 +65,7 @@ func newSearchRecentCommand() *cobra.Command {
 			service := recentsearch.NewService(c)
 			response, rateLimits, err := service.SearchRecent(ctx, query, params)
 			if err != nil {
+				printRateLimits(rateLimits)
 				return err
 			}
 

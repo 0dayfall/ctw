@@ -59,6 +59,7 @@ func newTimelinesUserCommand() *cobra.Command {
 			service := timelines.NewService(c)
 			response, rateLimits, err := service.GetUserTweets(ctx, userID, queryParams)
 			if err != nil {
+				printRateLimits(rateLimits)
 				return err
 			}
 
@@ -108,6 +109,7 @@ func newTimelinesMentionsCommand() *cobra.Command {
 			service := timelines.NewService(c)
 			response, rateLimits, err := service.GetUserMentions(ctx, userID, queryParams)
 			if err != nil {
+				printRateLimits(rateLimits)
 				return err
 			}
 
@@ -157,6 +159,7 @@ func newTimelinesHomeCommand() *cobra.Command {
 			service := timelines.NewService(c)
 			response, rateLimits, err := service.GetReverseChronological(ctx, userID, queryParams)
 			if err != nil {
+				printRateLimits(rateLimits)
 				return err
 			}
 
