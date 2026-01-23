@@ -53,6 +53,22 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Clean existing release assets (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REF: ${{ steps.release_ref.outputs.ref }}
+        run: |
+          tag="${RELEASE_REF#refs/tags/}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            assets="$(gh release view "$tag" --json assets -q '.assets[].name')"
+            if [ -n "$assets" ]; then
+              echo "Deleting existing assets for $tag..."
+              while IFS= read -r asset; do
+                [ -z "$asset" ] && continue
+                gh release delete-asset "$tag" "$asset" -y
+              done <<< "$assets"
+            fi
+          fi
       - name: Smoke test (optional)
         env:
           BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
