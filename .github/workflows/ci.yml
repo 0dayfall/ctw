@@ -14,5 +14,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Install jq for integration test
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Run tests
         run: go test ./...
+      - name: Run integration tests
+        run: go test ./cmd/ctw -count=1
