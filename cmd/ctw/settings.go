@@ -52,7 +52,7 @@ func ensureSettings(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	if cmd != nil && cmd.Flags().Changed("config") && !loaded {
+	if cmd != nil && cmd.Flags().Changed("config") && !loaded && cmd.Name() != "init" {
 		return fmt.Errorf("config file not found: %s", cfgPath)
 	}
 
