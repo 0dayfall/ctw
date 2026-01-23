@@ -63,13 +63,13 @@ echo "-> users lookup"
 "$CTW_BIN" users lookup --usernames "twitter" > "$temp_dir/users.json"
 
 echo "-> search recent"
-"$CTW_BIN" search recent --query "golang" --param "max_results=5" > "$temp_dir/search.json"
+"$CTW_BIN" search recent --query "golang" --param "max_results=10" > "$temp_dir/search.json"
 
 if command -v jq >/dev/null 2>&1; then
   user_id="$(jq -r '.data[0].id // empty' "$temp_dir/users.json")"
   if [[ -n "$user_id" ]]; then
     echo "-> timelines user"
-    "$CTW_BIN" timelines user --user-id "$user_id" --param "max_results=5" > "$temp_dir/timeline.json"
+    "$CTW_BIN" timelines user --user-id "$user_id" --param "max_results=10" > "$temp_dir/timeline.json"
   else
     echo "No user id found in users lookup; skipping timelines test."
   fi
