@@ -175,7 +175,7 @@ func writeConfigFile(token, source string, allowPlaintext, force bool) error {
 
 	userAgent := strings.TrimSpace(resolvedSettings.UserAgent)
 	if userAgent == "" {
-		userAgent = "ctw"
+		userAgent = "CERN-LineMode/2.15 libwww/2.17b3"
 	}
 
 	content := fmt.Sprintf(`[auth]
