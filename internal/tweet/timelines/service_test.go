@@ -60,11 +60,11 @@ func TestGetReverseChronological(t *testing.T) {
 
 		w.Header().Set("x-rate-limit-limit", "180")
 		w.Header().Set("x-rate-limit-remaining", "179")
-		response := map[string]interface{}{
-			"data": []map[string]interface{}{
+		response := map[string]any{
+			"data": []map[string]any{
 				{"id": "3", "text": "home timeline tweet"},
 			},
-			"meta": map[string]interface{}{
+			"meta": map[string]any{
 				"result_count": 1,
 				"next_token":   "abc123",
 			},

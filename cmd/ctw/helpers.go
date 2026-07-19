@@ -10,7 +10,7 @@ import (
 	"github.com/0dayfall/ctw/internal/client"
 )
 
-func printJSON(v interface{}) error {
+func printJSON(v any) error {
 	var (
 		data []byte
 		err  error

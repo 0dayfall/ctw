@@ -266,11 +266,16 @@ ctw watch --keyword "$KEYWORD" --auto-setup | while read -r line; do
 done
 ```
 
-### Example 5: Automated Content Curation
+### Example 5: Content Curation Review Queue
+
+> **Note:** Automatically retweeting or liking matched content violates
+> [X's automation rules](https://help.x.com/en/rules-and-policies/x-automation)
+> and risks account suspension. Automate the *finding*, keep the *engaging* human:
+> collect candidates into your bookmarks and review them yourself.
 
 ```bash
 #!/bin/bash
-# Find and retweet quality content
+# Find quality content and queue it for human review via bookmarks
 
 USER_ID="your_user_id"
 KEYWORDS=("golang tutorial" "golang tips" "golang best practices")
@@ -278,18 +283,21 @@ KEYWORDS=("golang tutorial" "golang tips" "golang best practices")
 for keyword in "${KEYWORDS[@]}"; do
     echo "Searching for: $keyword"
     
-    # Find tweets
+    # Find popular tweets and bookmark the top candidates
     ctw search recent \
         --query "$keyword lang:en -is:retweet has:links" \
         --param "max_results=10" |
         jq -r '.data[] | select(.public_metrics.retweet_count > 100) | .id' |
         head -n 3 |
         while read -r tweet_id; do
-            echo "Retweeting $tweet_id"
-            ctw retweets add --user-id "$USER_ID" --tweet-id "$tweet_id"
+            echo "Bookmarking $tweet_id for review"
+            ctw bookmarks add --user-id "$USER_ID" --tweet-id "$tweet_id"
             sleep 5
         done
 done
+
+# Later: review your queue and retweet what you actually endorse
+ctw bookmarks list --user-id "$USER_ID"
 ```
 
 ## Advanced Techniques

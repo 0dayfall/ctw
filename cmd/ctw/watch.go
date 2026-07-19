@@ -238,10 +238,7 @@ Examples:
 				fmt.Fprintf(os.Stderr, "disconnected: %s\n", lastDisconnect)
 				reconnects++
 
-				wait := backoff
-				if wait > maxBackoff {
-					wait = maxBackoff
-				}
+				wait := min(backoff, maxBackoff)
 				fmt.Fprintf(os.Stderr, "reconnecting in %s...\n", wait.Round(time.Second))
 
 				timer := time.NewTimer(wait)
@@ -255,12 +252,7 @@ Examples:
 					break
 				}
 
-				if backoff < maxBackoff {
-					backoff *= 2
-					if backoff > maxBackoff {
-						backoff = maxBackoff
-					}
-				}
+				backoff = min(backoff*2, maxBackoff)
 			}
 
 			// Show summary

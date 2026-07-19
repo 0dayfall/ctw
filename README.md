@@ -1,6 +1,11 @@
 # ctw - Command-Line Twitter Client
 
-**A scriptable CLI for automating Twitter workflows using the Twitter v2 API.**
+[![CI](https://github.com/0dayfall/ctw/actions/workflows/ci.yml/badge.svg)](https://github.com/0dayfall/ctw/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/0dayfall/ctw)](https://goreportcard.com/report/github.com/0dayfall/ctw)
+[![Release](https://img.shields.io/github/v/release/0dayfall/ctw)](https://github.com/0dayfall/ctw/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**A scriptable CLI for automating Twitter/X workflows using the v2 API.**
 
 Perfect for building bots, monitoring social media, aggregating content, or integrating Twitter into your automation pipelines. Single binary, JSON output, works with standard Unix tools.
 
@@ -11,7 +16,19 @@ Perfect for building bots, monitoring social media, aggregating content, or inte
 - **Single Binary** - No runtime dependencies, just download and run
 - **Script-Friendly** - Pipeable output, works with `jq`, `grep`, `awk` and other Unix tools
 - **Real-Time Processing** - Monitor tweets as they happen using Twitter's filtered stream API
-- **Production-Ready** - Rate-limit handling, error reporting, comprehensive logging
+- **Resilient** - Automatic retries with exponential backoff, honors `Retry-After` and rate-limit headers, clean exit codes and stderr logging
+
+## What API access do you need?
+
+`ctw` is only as useful as your X API access, and X's pricing changed drastically over the years -- please read this before installing so there are no surprises:
+
+| Commands | Access required (as of 2026) |
+|---|---|
+| `tweets create/delete`, `media upload`, `dms send` | Pay-per-use posting (about $0.015 per post) -- affordable for bots and cron jobs |
+| `search`, `counts`, `timelines`, `users`, `likes`, `retweets`, `bookmarks` | Pay-per-use reads (about $0.005 per read, capped monthly) |
+| `watch`, `stream` (filtered stream) | Pro or Enterprise tier only -- these are expensive legacy plans; streaming does **not** work on pay-per-use or Basic access |
+
+The free tier is closed to new developers. Check the [X Developer Portal](https://developer.x.com/) for current pricing before building on any of these endpoints. If a command returns HTTP 403, your access level does not include that endpoint -- it is not a bug in `ctw`.
 
 ## Quick Start
 
@@ -49,12 +66,11 @@ ctw search recent --query "climate change" --param "max_results=100" \
     | jq -r '.data[] | [.created_at, .text] | @csv' > data.csv
 ```
 
-### Build a Twitter Bot
+### Build a Posting Bot
 ```bash
-# Automated content curation
-ctw search recent --query "golang tutorial" --param "max_results=10" \
-    | jq -r '.data[0].id' \
-    | xargs -I {} ctw retweets add --user-id YOUR_ID --tweet-id {}
+# Publish generated content on a schedule (cron-friendly, pay-per-use)
+./generate_daily_digest.sh > digest.txt
+ctw tweets create --text "$(cat digest.txt)"
 ```
 
 ### Schedule Posts
@@ -134,7 +150,7 @@ sudo mv ctw /usr/local/bin/
 
 Download from [releases](https://github.com/0dayfall/ctw/releases) for Linux, macOS, Windows (amd64/arm64).
 
-See [INSTALL.md](INSTALL.md) for detailed installation instructions and [GORELEASER_SETUP.md](GORELEASER_SETUP.md) for building releases.
+See [INSTALL.md](INSTALL.md) for detailed installation instructions and [docs/GORELEASER_SETUP.md](docs/GORELEASER_SETUP.md) for building releases.
 
 ## Configuration
 
@@ -249,21 +265,21 @@ ctw users follow --source-id YOUR_ID --target-id 123
 ctw users block --source-id YOUR_ID --target-id 456
 ```
 
-### Engagement Automation
+### Engagement & Bookmarks
 
 ```bash
-# Like tweets matching criteria
-ctw search recent --query "open source" --param "max_results=10" \
-    | jq -r '.data[].id' \
-    | xargs -I {} ctw likes add --user-id YOUR_ID --tweet-id {}
-
-# Retweet quality content
+# Like or retweet a specific tweet
+ctw likes add --user-id YOUR_ID --tweet-id 1234567890
 ctw retweets add --user-id YOUR_ID --tweet-id 1234567890
 
-# Manage bookmarks
-ctw bookmarks add --user-id YOUR_ID --tweet-id 9876543210
+# Curate a review queue: bookmark interesting results to act on yourself
+ctw search recent --query "open source" --param "max_results=10" \
+    | jq -r '.data[].id' \
+    | xargs -I {} ctw bookmarks add --user-id YOUR_ID --tweet-id {}
 ctw bookmarks list --user-id YOUR_ID
 ```
+
+> **Note:** Bulk, unsupervised liking or retweeting violates [X's automation rules](https://help.x.com/en/rules-and-policies/x-automation) and can get an account suspended. Keep engagement actions deliberate; automate *collection* (search, bookmarks) rather than *engagement*.
 
 ### Scripting Patterns
 
@@ -323,7 +339,7 @@ ctw search --help
 `ctw` is a thin CLI wrapper around the Twitter v2 API. It handles:
 
 - **Authentication** - Bearer token management
-- **HTTP** - Configurable client with rate-limit tracking
+- **HTTP** - Configurable client with rate-limit tracking and automatic retries (exponential backoff, honors `Retry-After` / `x-rate-limit-reset`; non-idempotent requests are only replayed when the API confirms they were not processed)
 - **JSON** - Type-safe request/response handling
 - **Errors** - Proper exit codes and error messages
 - **Streaming** - Real-time filtered stream processing
@@ -384,4 +400,4 @@ Rate limits vary by endpoint. See [Twitter's documentation](https://developer.tw
 
 ## License
 
-See [LICENSE](LICENSE) file.
+MIT -- see [LICENSE](LICENSE).

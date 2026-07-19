@@ -21,6 +21,9 @@ const (
 	defaultBaseURL   = "https://api.twitter.com/"
 	defaultUserAgent = "CERN-LineMode/2.15 libwww/2.17b3"
 	defaultTimeout   = 60 * time.Second
+
+	defaultRetryBase    = 500 * time.Millisecond
+	defaultRetryWaitMax = 30 * time.Second
 )
 
 // Config describes how to construct a Client.
@@ -30,14 +33,27 @@ type Config struct {
 	UserAgent   string
 	HTTPClient  *http.Client
 	Timeout     time.Duration
+
+	// Retry is the number of additional attempts made after a transient
+	// failure (network error, HTTP 429, or a retryable 5xx). Zero disables
+	// retries.
+	Retry int
+
+	// RetryWaitMax caps how long a single retry wait can last. Rate-limit
+	// resets further away than this are truncated. Defaults to 30s.
+	RetryWaitMax time.Duration
 }
 
 // Client wraps HTTP concerns for talking to the Twitter v2 API.
 type Client struct {
-	httpClient  *http.Client
-	baseURL     *url.URL
-	bearerToken string
-	userAgent   string
+	httpClient   *http.Client
+	baseURL      *url.URL
+	bearerToken  string
+	userAgent    string
+	retry        int
+	retryBase    time.Duration
+	retryWaitMax time.Duration
+	logf         func(format string, args ...any)
 }
 
 // New constructs a Client using the supplied configuration taking sensible defaults
@@ -67,11 +83,27 @@ func New(cfg Config) (*Client, error) {
 		httpClient = &http.Client{Timeout: timeout}
 	}
 
+	retry := cfg.Retry
+	if retry < 0 {
+		retry = 0
+	}
+
+	retryWaitMax := cfg.RetryWaitMax
+	if retryWaitMax <= 0 {
+		retryWaitMax = defaultRetryWaitMax
+	}
+
 	return &Client{
-		httpClient:  httpClient,
-		baseURL:     baseURL,
-		bearerToken: bearer,
-		userAgent:   userAgent,
+		httpClient:   httpClient,
+		baseURL:      baseURL,
+		bearerToken:  bearer,
+		userAgent:    userAgent,
+		retry:        retry,
+		retryBase:    defaultRetryBase,
+		retryWaitMax: retryWaitMax,
+		logf: func(format string, args ...any) {
+			fmt.Fprintf(os.Stderr, format, args...)
+		},
 	}, nil
 }
 
@@ -97,7 +129,7 @@ func resolveBaseURL(raw string) (*url.URL, error) {
 }
 
 // NewRequest builds an *http.Request using the configured base URL.
-func (c *Client) NewRequest(ctx context.Context, method, path string, query map[string]string, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(ctx context.Context, method, path string, query map[string]string, body any) (*http.Request, error) {
 	if c == nil {
 		return nil, errors.New("client: nil Client")
 	}
@@ -147,7 +179,7 @@ func (c *Client) Get(ctx context.Context, path string, query map[string]string) 
 }
 
 // Post issues a POST request against the supplied path with a JSON payload.
-func (c *Client) Post(ctx context.Context, path string, body interface{}, query map[string]string) (*http.Response, error) {
+func (c *Client) Post(ctx context.Context, path string, body any, query map[string]string) (*http.Response, error) {
 	req, err := c.NewRequest(ctx, http.MethodPost, path, query, body)
 	if err != nil {
 		return nil, err
@@ -165,6 +197,9 @@ func (c *Client) Delete(ctx context.Context, path string, query map[string]strin
 }
 
 // Do forwards the request to the underlying http.Client while adding headers.
+// Transient failures (network errors, HTTP 429, and retryable 5xx responses)
+// are retried up to the configured number of attempts with exponential backoff,
+// honoring Retry-After and x-rate-limit-reset headers when present.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if c == nil {
 		return nil, errors.New("client: nil Client")
@@ -172,7 +207,130 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if req == nil {
 		return nil, errors.New("client: nil request")
 	}
-	return c.httpClient.Do(req)
+
+	var lastErr error
+	for attempt := 0; ; attempt++ {
+		attemptReq, err := cloneRequest(req, attempt)
+		if err != nil {
+			if lastErr != nil {
+				return nil, lastErr
+			}
+			return nil, err
+		}
+
+		resp, err := c.httpClient.Do(attemptReq)
+
+		if attempt >= c.retry || !c.shouldRetry(req, resp, err) {
+			return resp, err
+		}
+
+		wait := c.retryWait(attempt, resp)
+		if err != nil {
+			lastErr = err
+			c.logf("ctw: request failed (%v); retrying in %s (attempt %d/%d)\n", err, wait.Round(time.Millisecond), attempt+1, c.retry)
+		} else {
+			lastErr = fmt.Errorf("client: transient status %d", resp.StatusCode)
+			c.logf("ctw: got HTTP %d; retrying in %s (attempt %d/%d)\n", resp.StatusCode, wait.Round(time.Millisecond), attempt+1, c.retry)
+			drainAndClose(resp.Body)
+		}
+
+		timer := time.NewTimer(wait)
+		select {
+		case <-req.Context().Done():
+			timer.Stop()
+			return nil, req.Context().Err()
+		case <-timer.C:
+		}
+	}
+}
+
+// cloneRequest returns the request to use for the given attempt. The original
+// request is used as-is for the first attempt; retries need a fresh body.
+func cloneRequest(req *http.Request, attempt int) (*http.Request, error) {
+	if attempt == 0 {
+		return req, nil
+	}
+	clone := req.Clone(req.Context())
+	if req.Body != nil {
+		if req.GetBody == nil {
+			return nil, errors.New("client: request body cannot be replayed for retry")
+		}
+		body, err := req.GetBody()
+		if err != nil {
+			return nil, fmt.Errorf("client: replay request body: %w", err)
+		}
+		clone.Body = body
+	}
+	return clone, nil
+}
+
+// shouldRetry reports whether a request may be safely attempted again.
+func (c *Client) shouldRetry(req *http.Request, resp *http.Response, err error) bool {
+	if req.Context().Err() != nil {
+		return false
+	}
+
+	idempotent := req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodDelete || req.Method == http.MethodPut
+
+	if err != nil {
+		// Network-level failure: only replay requests that are safe to repeat.
+		return idempotent
+	}
+	if resp == nil {
+		return false
+	}
+
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+		// Rate limited or unavailable: the request was not processed.
+		return true
+	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusGatewayTimeout:
+		// The server may have processed the request; only replay idempotent ones.
+		return idempotent
+	default:
+		return false
+	}
+}
+
+// retryWait computes how long to wait before the next attempt, preferring
+// server-provided hints (Retry-After, x-rate-limit-reset) over exponential
+// backoff, always bounded by retryWaitMax.
+func (c *Client) retryWait(attempt int, resp *http.Response) time.Duration {
+	base := c.retryBase
+	if base <= 0 {
+		base = defaultRetryBase
+	}
+	wait := base << uint(attempt)
+
+	if resp != nil {
+		if after := strings.TrimSpace(resp.Header.Get("Retry-After")); after != "" {
+			if seconds, err := strconv.Atoi(after); err == nil && seconds > 0 {
+				wait = time.Duration(seconds) * time.Second
+			}
+		} else if resp.StatusCode == http.StatusTooManyRequests {
+			if reset := strings.TrimSpace(resp.Header.Get("x-rate-limit-reset")); reset != "" {
+				if epoch, err := strconv.ParseInt(reset, 10, 64); err == nil {
+					if until := time.Until(time.Unix(epoch, 0)); until > 0 {
+						wait = until
+					}
+				}
+			}
+		}
+	}
+
+	wait = min(wait, c.retryWaitMax)
+	if wait <= 0 {
+		wait = base
+	}
+	return wait
+}
+
+func drainAndClose(body io.ReadCloser) {
+	if body == nil {
+		return
+	}
+	_, _ = io.Copy(io.Discard, io.LimitReader(body, 4096))
+	_ = body.Close()
 }
 
 func (c *Client) resolve(path string) (*url.URL, error) {

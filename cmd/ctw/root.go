@@ -59,6 +59,7 @@ func newClientFromFlags() (*client.Client, error) {
 		BearerToken: resolvedSettings.BearerToken,
 		UserAgent:   resolvedSettings.UserAgent,
 		Timeout:     resolvedSettings.Timeout,
+		Retry:       resolvedSettings.Retry,
 	}
 	return client.New(cfg)
 }

@@ -24,3 +24,13 @@ dist/
 # Local secrets
 tokens.toml
 ctw.toml
+
+# Build output
+bin/
+
+# Go workspace files (local dev)
+go.work
+go.work.sum
+
+# Local trash (pending manual delete)
+_to_delete/

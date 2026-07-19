@@ -93,8 +93,8 @@ func resolveEnvRefs(cfg *Config) {
 }
 
 func expandEnvRef(value string) string {
-	if strings.HasPrefix(value, "env:") {
-		return os.Getenv(strings.TrimPrefix(value, "env:"))
+	if name, ok := strings.CutPrefix(value, "env:"); ok {
+		return os.Getenv(name)
 	}
 	return value
 }

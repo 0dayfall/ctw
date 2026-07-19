@@ -119,8 +119,7 @@ func resolveBearerTokenSource() (string, string, error) {
 
 	if resolvedSettings.ConfigLoaded {
 		rawToken := loadRawBearerToken(resolvedSettings.ConfigPath)
-		if strings.HasPrefix(rawToken, "env:") {
-			envName := strings.TrimPrefix(rawToken, "env:")
+		if envName, ok := strings.CutPrefix(rawToken, "env:"); ok {
 			envValue := strings.TrimSpace(os.Getenv(envName))
 			if envValue != "" {
 				return envValue, "env:" + envName, nil

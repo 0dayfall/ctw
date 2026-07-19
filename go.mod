@@ -1,6 +1,6 @@
 module github.com/0dayfall/ctw
 
-go 1.18
+go 1.25
 
 require (
 	github.com/BurntSushi/toml v1.3.2

@@ -3,27 +3,26 @@ package utils
 import (
 	"encoding/json"
 	"log"
-	"strings"
 )
 
-func PrettyPrint(v interface{}) {
+func PrettyPrint(v any) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err == nil {
 		log.Println(string(b))
 	}
 }
 
-func FindString(data interface{}, target string) bool {
+func FindString(data any, target string) bool {
 	switch v := data.(type) {
 	case string:
-		return strings.Compare(v, target) == 0
-	case []interface{}:
+		return v == target
+	case []any:
 		for _, elem := range v {
 			if FindString(elem, target) {
 				return true
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		for _, elem := range v {
 			if FindString(elem, target) {
 				return true
@@ -33,17 +32,17 @@ func FindString(data interface{}, target string) bool {
 	return false
 }
 
-func FindStringWithValue(data interface{}, target string) bool {
+func FindStringWithValue(data any, target string) bool {
 	switch v := data.(type) {
 	case string:
-		return strings.Compare(v, target) == 0
-	case []interface{}:
+		return v == target
+	case []any:
 		for _, elem := range v {
 			if FindString(elem, target) {
 				return true
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		for _, elem := range v {
 			if FindString(elem, target) {
 				return true
